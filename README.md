@@ -248,7 +248,7 @@ The service listens on `127.0.0.1` only. In addition:
 ```
 kassist.py                          service + CLI (WS, apps, binds, shortcuts, evdev)
 install.sh                          installer (--udev, --rules, --browser, --uninstall)
-debian/                             Debian/Ubuntu package (debhelper + kassist-setup)
+debian/                             Debian/Ubuntu package (debhelper)
 tests/smoke.py                      protocol test with a raw WS client
 tests/ci.sh                         headless test slice used by CI
 tools/selftest.py                   environment diagnostics (and --simulate)
@@ -256,8 +256,12 @@ tools/keysim.py                     uinput key injector (GNOME --simulate fallba
 tools/keypeek.py                    shows the real keyval the key sends
 docs/vm-testing.md                  virt-manager test guide (Debian/Ubuntu/KDE)
 docs/status.md                      project status and handoff notes
-.github/workflows/ci.yml            CI: protocol, distros, shellcheck, .deb
+RELEASING.md                        release checklist (tag → automated build)
+.github/workflows/ci.yml            CI: protocol, distros, shellcheck, .deb/.rpm
+.github/workflows/release.yml       tag → build .deb/.rpm → GitHub release
 packaging/kassist.service           systemd --user unit (template)
+packaging/kassist-setup             per-user setup for the packages
+packaging/kassist.spec              Fedora RPM spec (COPR-ready)
 packaging/launcherassist.desktop    launcherassist:// handler (template)
 packaging/99-keychron-assist.rules  udev rule (--udev/--rules only)
 ```
