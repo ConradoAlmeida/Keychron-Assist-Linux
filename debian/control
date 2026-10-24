@@ -1,0 +1,19 @@
+Source: kassist
+Section: utils
+Priority: optional
+Maintainer: Conrado Almeida <conrado.almeida@outlook.com>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.2
+Rules-Requires-Root: no
+Homepage: https://github.com/ConradoAlmeida/Keychron-Assist-Linux
+
+Package: kassist
+Architecture: all
+Depends: ${misc:Depends}, python3 (>= 3.9), libglib2.0-bin, xdg-utils, desktop-file-utils
+Recommends: chromium | google-chrome-stable
+Description: local helper for the Keychron Launcher (unofficial)
+ kassist serves the app list to the Keychron Launcher website, stores the
+ Quick Start bindings and opens the bound app when the keyboard key fires,
+ either through GNOME custom shortcuts or by reading evdev directly.
+ .
+ It runs as a per-user systemd service and listens on 127.0.0.1 only.

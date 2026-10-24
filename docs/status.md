@@ -297,11 +297,11 @@ Notes kept from the run:
 
 ### 7.2 Packaging
 
-- `.deb` (priority, since Debian/Ubuntu is mandatory): binary in
-  `/usr/bin/kassist`, unit in `/usr/lib/systemd/user/`, `.desktop` in
-  `/usr/share/applications/` (with `Exec=kassist protocol %u`), udev rule
-  **optional** (subpackage or `kassist --rules`), `%post` running
-  `update-desktop-database`.
+- ~~`.deb`~~ **done**: `debian/` (debhelper, `Architecture: all`) ships
+  `/usr/bin/kassist`, the user unit in `/usr/lib/systemd/user`, the URI
+  handler, the udev rule and `kassist-setup`. The unit runs `kassist run` and
+  the daemon auto-selects GNOME or evdev. Validated on Debian 13 GNOME and KDE;
+  CI builds it on every push.
 - `.rpm` + COPR (Fedora): same structure.
 - `PKGBUILD` (Arch) — a large custom-keyboard audience.
 - Flatpak: **not viable** for the daemon (it must launch host apps); document as
@@ -383,6 +383,7 @@ instance use `fuser -k 40006/tcp`.
 
 ```
 kassist.py                          daemon + CLI (stdlib only)
+debian/                             Debian packaging (debhelper, kassist-setup)
 install.sh                          installer (--udev, --rules, --uninstall)
 tests/smoke.py                      protocol test (raw WS client)
 tools/selftest.py                   environment diagnostics + --simulate

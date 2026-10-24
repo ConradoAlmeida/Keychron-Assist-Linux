@@ -1,0 +1,21 @@
+#!/bin/sh
+# Per-user setup for the packaged install. Run once as the desktop user:
+#   kassist-setup
+set -e
+
+if command -v systemctl >/dev/null 2>&1; then
+  systemctl --user enable kassist.service || echo "warning: could not enable the user service"
+  systemctl --user restart kassist.service || true
+fi
+
+if command -v gsettings >/dev/null 2>&1 &&
+   gsettings list-schemas 2>/dev/null | grep -qx org.gnome.settings-daemon.plugins.media-keys; then
+  /usr/bin/kassist setup-shortcuts --binary /usr/bin/kassist
+else
+  echo "No GNOME shortcut backend; the service uses the evdev backend."
+  echo "If the keyboard was already plugged in, replug it (or run: sudo udevadm trigger --action=add --subsystem-match=input --subsystem-match=hidraw)."
+fi
+
+xdg-mime default launcherassist.desktop x-scheme-handler/launcherassist
+
+/usr/bin/kassist doctor || true

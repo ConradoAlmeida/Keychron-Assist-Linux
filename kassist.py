@@ -741,6 +741,9 @@ def remove_shortcuts(verbose: bool = True) -> int:
 # --------------------------------------------------------------------------
 
 def cmd_run(args: argparse.Namespace) -> int:
+    if not args.watch and not args.sniff and not gnome_schema_available():
+        log("no GNOME shortcut backend; using the evdev backend")
+        args.watch = True
     store = Store()
     server = Server(store, scan_apps(with_icons=not args.no_icons), not args.no_icons, args.port)
 
@@ -842,15 +845,16 @@ def cmd_doctor(args: argparse.Namespace) -> int:
               f"{len(active)} slots: " + ", ".join(f"{s} ({k})" for s, k in active.items()))
 
     store = Store()
+    saved = store.all()
     broken = []
-    for bind in store.all():
+    for bind in saved:
         data = bind.get("opt_data") or {}
         target = data.get("path") or ""
         if bind.get("opt_type") == "App" and target and not Path(target).exists():
             broken.append(target)
     check(not broken, "app paths in bindings exist", "; ".join(broken))
-    check(bool(store.all()), "at least one binding saved",
-          "set one up in Quick Start", optional=True)
+    check(bool(saved), "at least one binding saved",
+          "" if saved else "set one up in Quick Start", optional=True)
 
     devices = keychron_event_nodes()
     readable = [n for n in devices if os.access(n, os.R_OK)]

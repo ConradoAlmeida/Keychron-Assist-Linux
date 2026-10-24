@@ -27,7 +27,7 @@ jobs:
         run: python -m compileall -q kassist.py tools tests
 
       - name: Lint the installer
-        run: shellcheck install.sh tests/ci.sh
+        run: shellcheck install.sh tests/ci.sh debian/kassist-setup debian/postinst
 
       - name: Protocol smoke test (headless)
         run: bash tests/ci.sh
@@ -48,3 +48,20 @@ jobs:
             -v "$PWD:/src" -w /src \
             ${{ matrix.image }} \
             sh -c "apt-get update -qq && apt-get install -y -qq python3 && bash tests/ci.sh"
+
+  deb:
+    name: deb package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the .deb
+        run: |
+          docker run --rm \
+            -v "$PWD:/src" -w /src \
+            debian:13 \
+            sh -c "apt-get update -qq && apt-get install -y -qq debhelper dpkg-dev \
+                   && cp -a /src /tmp/build && cd /tmp/build \
+                   && dpkg-buildpackage -us -uc -b \
+                   && cp ../kassist_*.deb /src/ \
+                   && dpkg-deb -c /src/kassist_*.deb"

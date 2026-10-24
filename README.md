@@ -147,6 +147,19 @@ On Ubuntu, use the Google Chrome `.deb`: the Chromium snap cannot open
 a confined browser is found, `./install.sh` offers to install Chrome; run
 `./install.sh --browser` to do it non-interactively.
 
+### Debian / Ubuntu package
+
+```bash
+sudo apt install ./kassist_0.1.0_all.deb
+kassist-setup        # once per user: user unit, shortcuts and URI handler
+```
+
+The package installs `/usr/bin/kassist`, the user unit in
+`/usr/lib/systemd/user`, the `launcherassist://` handler and the udev rule.
+`kassist-setup` runs as the desktop user, enables the service and registers the
+GNOME shortcuts (or reports that the evdev backend will be used). The unit
+runs `kassist run`; the daemon picks the backend at startup.
+
 ## Commands
 
 ```bash
