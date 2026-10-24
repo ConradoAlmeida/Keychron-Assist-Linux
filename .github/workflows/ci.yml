@@ -65,3 +65,8 @@ jobs:
                    && dpkg-buildpackage -us -uc -b \
                    && cp ../kassist_*.deb /src/ \
                    && dpkg-deb -c /src/kassist_*.deb"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kassist-deb
+          path: kassist_*.deb
