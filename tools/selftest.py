@@ -5,10 +5,11 @@
     python3 tools/selftest.py --simulate      # simulate the first slot's key
     python3 tools/selftest.py --simulate F17  # simulate a specific slot
 
-`--simulate` injects the slot's real keyval with `wtype` (Wayland). That
-exercises the chain compositor -> `kassist trigger` -> `gio launch` without a
-physical Keychron keyboard. Close the bound app first, otherwise `gio launch`
-just focuses the existing window.
+`--simulate` injects the slot's key with `wtype` (wlroots/KDE) or, when the
+compositor lacks the virtual-keyboard protocol (GNOME), with `tools/keysim.py`
+through uinput (sudo). It exercises the chain compositor -> `kassist trigger` ->
+`gio launch` without a physical Keychron keyboard. Close the bound app first,
+otherwise `gio launch` just focuses the existing window.
 """
 
 from __future__ import annotations
@@ -82,6 +83,18 @@ def procs() -> dict[int, str]:
 def matches(cmd: str, patterns: list[str]) -> bool:
     low = cmd.lower()
     return any(p and len(p) > 3 and p.lower() in low for p in patterns)
+
+
+def desktop_exec(path: str) -> str:
+    """First Exec= argv[0] from a .desktop file (bindings often omit 'exec')."""
+    try:
+        for line in Path(path).read_text(errors="replace").splitlines():
+            if line.startswith("Exec="):
+                argv = kassist.clean_exec(line[5:])
+                return argv[0] if argv else ""
+    except OSError:
+        pass
+    return ""
 
 
 def main() -> int:
@@ -197,11 +210,35 @@ def main() -> int:
     if target_bind and target_bind.get("opt_type") == "App":
         data = target_bind.get("opt_data") or {}
         exe = (data.get("exec") or [""])[0] if isinstance(data.get("exec"), list) else ""
-        patterns = [Path(exe).name, Path(data.get("path", "")).stem]
+        path = data.get("path", "")
+        if not exe and path:
+            exe = desktop_exec(path)
+        patterns = [Path(exe).name, Path(path).stem]
 
     before = {pid for pid, cmd in procs().items() if matches(cmd, patterns)}
-    print(f"\n-> simulating {slot} ({keyval}) with wtype...")
-    subprocess.run(["wtype", "-P", keyval, "-s", "50", "-p", keyval], check=False)
+    print(f"\n-> simulating {slot} ({keyval})...")
+
+    injected = False
+    if shutil.which("wtype"):
+        proc = subprocess.run(["wtype", "-P", keyval, "-s", "50", "-p", keyval],
+                              capture_output=True, text=True)
+        if proc.returncode == 0:
+            injected = True
+        elif "virtual keyboard protocol" in (proc.stderr + proc.stdout):
+            print("   wtype cannot inject here (compositor lacks zwp_virtual_keyboard_v1);"
+                  "\n   falling back to the uinput helper (sudo).")
+
+    if not injected:
+        helper = Path(__file__).with_name("keysim.py")
+        if helper.exists():
+            print(f"   -> sudo python3 {helper} {slot}")
+            if subprocess.run(["sudo", sys.executable, str(helper), slot]).returncode == 0:
+                injected = True
+        if not injected:
+            print("   no simulator available: install wtype (wlroots/KDE) or python3-evdev"
+                  "\n   and run tools/keysim.py as root")
+            return 2
+
     launched = None
     for _ in range(20):
         time.sleep(0.3)

@@ -170,6 +170,15 @@ application directory (XDG/Flatpak/snap). `AddKeyBind` only accepts `App`
 (existing `.desktop`) or `Url` (`http`/`https`). Previously any path could be
 requested.
 
+### 5.6 wtype does not work on GNOME
+
+Mutter does not expose `zwp_virtual_keyboard_v1`, so `wtype` fails with
+"Compositor does not support the virtual keyboard protocol". `tools/selftest.py
+--simulate` now falls back to `tools/keysim.py`, which emits the key through
+`/dev/uinput` (root + `python3-evdev`). Verified in the Debian GNOME VM: uinput
+`KEY_F16` → XKB `XF86Launch7` → GNOME shortcut → `kassist trigger F16` →
+`gnome-calculator` launched. On wlroots/KDE, `wtype` is used.
+
 ---
 
 ## 6. What was done in the distribution refactor
@@ -229,6 +238,10 @@ verified behaviour:
   - Debian KDE: `./install.sh` (no flags) detects the missing GNOME schema and
     **falls back to the evdev backend** instead of aborting; `doctor`/`selftest`
     report 0 failures.
+  - Debian GNOME: compositor chain validated without hardware — uinput
+    `KEY_F16` → `XF86Launch7` → shortcut → `kassist trigger F16` →
+    `gnome-calculator` (new `tools/keysim.py`, because wtype cannot inject on
+    Mutter).
   - Not verified yet: the physical key and the real site inside the guests
     (needs USB redirection; see 7.1).
 
@@ -362,6 +375,7 @@ kassist.py                          daemon + CLI (stdlib only)
 install.sh                          installer (--udev, --rules, --uninstall)
 tests/smoke.py                      protocol test (raw WS client)
 tools/selftest.py                   environment diagnostics + --simulate
+tools/keysim.py                     uinput key injector (GNOME --simulate)
 tools/keypeek.py                    shows the key's keyval/keycode
 tests/ci.sh                         headless test slice used by CI
 .github/workflows/ci.yml            CI: syntax, shellcheck, protocol, distros

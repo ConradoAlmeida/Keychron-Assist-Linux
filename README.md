@@ -162,7 +162,7 @@ Without installing anything:
 python3 kassist.py list-apps
 python3 tests/smoke.py                 # protocol, no browser
 python3 tools/selftest.py              # environment + installation
-python3 tools/selftest.py --simulate   # injects the key with wtype (VM)
+python3 tools/selftest.py --simulate   # inject the key (wtype; keysim on GNOME)
 ```
 
 ## Testing
@@ -171,7 +171,7 @@ python3 tools/selftest.py --simulate   # injects the key with wtype (VM)
 bash tests/ci.sh                       # headless: starts its own daemon, no GUI
 python3 tests/smoke.py                 # protocol, against a running service
 python3 tools/selftest.py              # environment + installation diagnostics
-python3 tools/selftest.py --simulate F16   # injects the key with wtype (VM)
+python3 tools/selftest.py --simulate F16   # inject the key (wtype; keysim on GNOME)
 ```
 
 `tests/ci.sh` is what CI runs: it sets up a throwaway `XDG_CONFIG_HOME`/
@@ -180,6 +180,11 @@ and runs the protocol test. CI also checks syntax on Python 3.9/3.11/3.13,
 lints the shell scripts, and repeats the protocol test inside Debian 13 and
 Ubuntu 24.04 containers. GNOME/Wayland/hardware are covered by the VM guide
 instead.
+
+`--simulate` uses `wtype` where the compositor exposes
+`zwp_virtual_keyboard_v1` (sway/wlroots, KDE). GNOME/Mutter does not, so the
+selftest falls back to `tools/keysim.py` via uinput (asks for sudo; needs
+`python3-evdev`).
 
 ## Security
 

@@ -169,13 +169,27 @@ simulate:
 python3 tools/selftest.py --simulate F16
 ```
 
-The command injects the slot's real keyval (`XF86Launch7`) with `wtype` and
-checks whether a new process appeared:
+It injects the slot's key and checks whether a new process appeared. The
+injector depends on the compositor:
+
+- **sway/wlroots and KDE** support `zwp_virtual_keyboard_v1` → `wtype`;
+- **GNOME/Mutter does not** → the selftest falls back to
+  `sudo python3 tools/keysim.py F16` (uinput, needs `python3-evdev`).
+
+```bash
+sudo apt install -y python3-evdev     # once, for the GNOME fallback
+sudo python3 tools/keysim.py F16      # manual fallback
+```
+
+Expected:
 
 ```
--> simulating F16 (XF86Launch7) with wtype...
+-> simulating F16 (XF86Launch7)...
    OK: new process [12345] -> F16 opened the app
 ```
+
+In evdev mode (`--udev`) the daemon reads the keyboard directly, so this
+simulation does not apply — use the physical key.
 
 ---
 
