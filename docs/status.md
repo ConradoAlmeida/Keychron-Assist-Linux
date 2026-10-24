@@ -320,7 +320,12 @@ Notes kept from the run:
   Podman before the first run.
 - Add the repository description and topics on GitHub (manual: `gh` is not
   installed): `keychron`, `qmk`, `linux`, `gnome`, `wayland`, `hid`.
-- Tag `v0.1.0` and publish a release with the tarball and instructions.
+- ~~Tag `v0.1.0` and publish a release with the tarball and instructions.~~
+  **automated**: `.github/workflows/release.yml` runs on a `v*` tag, builds the
+  `.deb` and `.rpm` from the tagged tree and publishes the release with both
+  assets plus a generated `SHA256SUMS`. Notes live in
+  `docs/release-notes/<tag>.md`; the job checks the tag against
+  `debian/changelog` and the RPM spec.
 - "Unofficial, not affiliated with Keychron" notice (already in the README).
 - If promoting: a short post on r/Keychron and r/linuxquestions; and a technical
   email to Keychron support offering the project as a reference.

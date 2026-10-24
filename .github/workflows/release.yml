@@ -1,0 +1,72 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: build and publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check versions and notes
+        run: |
+          ver="${GITHUB_REF_NAME#v}"
+          deb_ver=$(sed -n '1s/.*(\(.*\)).*/\1/p' debian/changelog)
+          rpm_ver=$(sed -n 's/^Version:[[:space:]]*//p' packaging/kassist.spec | head -1)
+          [ "$ver" = "$deb_ver" ] || { echo "tag $ver != debian/changelog $deb_ver"; exit 1; }
+          [ "$ver" = "$rpm_ver" ] || { echo "tag $ver != spec $rpm_ver"; exit 1; }
+          test -f "docs/release-notes/${GITHUB_REF_NAME}.md" || {
+            echo "missing docs/release-notes/${GITHUB_REF_NAME}.md"; exit 1; }
+
+      - name: Build the .deb
+        run: |
+          docker run --rm \
+            -v "$PWD:/src" -w /src \
+            debian:13 \
+            sh -c "apt-get update -qq && apt-get install -y -qq debhelper dpkg-dev \
+                   && cp -a /src /tmp/build && cd /tmp/build \
+                   && dpkg-buildpackage -us -uc -b \
+                   && cp ../kassist_*.deb /src/"
+
+      - name: Build the .rpm
+        run: |
+          ver="${GITHUB_REF_NAME#v}"
+          mkdir -p "$RUNNER_TEMP/stage/Keychron-Assist-Linux-$ver" "$RUNNER_TEMP/out"
+          tar -C . --exclude=.git --exclude='*/__pycache__' --exclude='*.pyc' -cf - . \
+            | tar -C "$RUNNER_TEMP/stage/Keychron-Assist-Linux-$ver" -xf -
+          tar -C "$RUNNER_TEMP/stage" -czf "$RUNNER_TEMP/out/v$ver.tar.gz" "Keychron-Assist-Linux-$ver"
+          docker run --rm \
+            -v "$RUNNER_TEMP/out:/rpmbuild" \
+            -v "$PWD/packaging/kassist.spec:/spec/kassist.spec:ro" \
+            fedora:44 \
+            bash -c "dnf -y install rpm-build systemd-rpm-macros >/dev/null 2>&1 \
+                     && mkdir -p /root/rpmbuild/SOURCES /root/rpmbuild/SPECS \
+                     && cp /rpmbuild/v$ver.tar.gz /root/rpmbuild/SOURCES/ \
+                     && cp /spec/kassist.spec /root/rpmbuild/SPECS/ \
+                     && rpmbuild -bb /root/rpmbuild/SPECS/kassist.spec \
+                     && cp /root/rpmbuild/RPMS/noarch/*.rpm /rpmbuild/"
+
+      - name: Checksums
+        run: |
+          cp "$GITHUB_WORKSPACE"/kassist_*.deb "$RUNNER_TEMP/out/"
+          cd "$RUNNER_TEMP/out"
+          sha256sum ./*.deb ./*.rpm > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --verify-tag \
+            --title "kassist $GITHUB_REF_NAME" \
+            --notes-file "docs/release-notes/${GITHUB_REF_NAME}.md" \
+            "$RUNNER_TEMP"/out/*.deb \
+            "$RUNNER_TEMP"/out/*.rpm \
+            "$RUNNER_TEMP"/out/SHA256SUMS
