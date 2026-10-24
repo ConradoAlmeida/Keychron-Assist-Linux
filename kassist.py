@@ -639,6 +639,28 @@ def system_keyvals() -> dict[str, str]:
     return found
 
 
+def gnome_schema_available() -> bool:
+    """True when the GNOME media-keys schema exists (GNOME shortcut backend)."""
+    try:
+        out = subprocess.run(["gsettings", "list-schemas"], capture_output=True, text=True)
+    except OSError:
+        return False
+    return out.returncode == 0 and SCHEMA in out.stdout.split()
+
+
+def installed_backend() -> str:
+    """Backend of the installed user unit: "evdev" when it runs with --watch."""
+    config = Path(os.environ.get("XDG_CONFIG_HOME") or (Path.home() / ".config"))
+    try:
+        unit = (config / "systemd" / "user" / "kassist.service").read_text()
+    except OSError:
+        return "gnome"
+    for line in unit.splitlines():
+        if line.startswith("ExecStart=") and "--watch" in line:
+            return "evdev"
+    return "gnome"
+
+
 def gsettings_get(key: str) -> str:
     out = subprocess.run(["gsettings", "get", SCHEMA, key], capture_output=True, text=True, check=True)
     return out.stdout.strip()
@@ -802,17 +824,22 @@ def cmd_doctor(args: argparse.Namespace) -> int:
 
     keyvals = system_keyvals()
     active = {slot: kv for slot, kv in keyvals.items() if kv and not kv.startswith(XKB_OWNED_PREFIXES)}
-    paths = parse_paths(subprocess.run(["gsettings", "get", SCHEMA, "custom-keybindings"],
-                                       capture_output=True, text=True).stdout)
-    missing = []
-    for slot, keyval in active.items():
-        path = f"{SHORTCUT_BASE}kassist-{slot.lower()}/"
-        binding = subprocess.run(["gsettings", "get", f"{SCHEMA}.custom-keybinding:{path}", "binding"],
-                                 capture_output=True, text=True).stdout.strip().strip("'")
-        if path not in paths or binding != keyval:
-            missing.append(slot)
-    check(not missing, "compositor shortcuts", "missing: " + ", ".join(missing) if missing else
-          f"{len(active)} slots: " + ", ".join(f"{s} ({k})" for s, k in active.items()))
+    if installed_backend() == "evdev":
+        check(True, "compositor shortcuts", "not used (evdev backend)", optional=True)
+    elif not gnome_schema_available():
+        check(True, "compositor shortcuts", "not used (no GNOME shortcut backend)", optional=True)
+    else:
+        paths = parse_paths(subprocess.run(["gsettings", "get", SCHEMA, "custom-keybindings"],
+                                           capture_output=True, text=True).stdout)
+        missing = []
+        for slot, keyval in active.items():
+            path = f"{SHORTCUT_BASE}kassist-{slot.lower()}/"
+            binding = subprocess.run(["gsettings", "get", f"{SCHEMA}.custom-keybinding:{path}", "binding"],
+                                     capture_output=True, text=True).stdout.strip().strip("'")
+            if path not in paths or binding != keyval:
+                missing.append(slot)
+        check(not missing, "compositor shortcuts", "missing: " + ", ".join(missing) if missing else
+              f"{len(active)} slots: " + ", ".join(f"{s} ({k})" for s, k in active.items()))
 
     store = Store()
     broken = []

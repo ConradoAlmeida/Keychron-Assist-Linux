@@ -97,6 +97,10 @@ dependency) and is the path for the vendor keycodes (`A6`..`A55`). It needs the
 udev rule because the kernel denies access to keyboards on purpose (keylogger
 protection).
 
+On desktops without the GNOME media-keys schema (KDE Plasma, sway, ...)
+`./install.sh` automatically falls back to the evdev backend instead of failing;
+finish with `sudo ./install.sh --rules` so the daemon can read the keyboard.
+
 ## Installation (no sudo)
 
 ```bash

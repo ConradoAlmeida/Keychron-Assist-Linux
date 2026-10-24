@@ -1,4 +1,4 @@
-# Testing in a VM (GNOME Boxes) — Debian and Ubuntu
+# Testing in a VM (virt-manager) — Debian, Ubuntu and KDE
 
 Goal: validate the install on Debian/Ubuntu without touching the main system.
 The VM covers the whole flow, including the physical key, if you redirect the
@@ -8,15 +8,18 @@ keyboard (section 5).
 
 ## 1. Create the VM
 
-In Boxes: **New** → pick the ISO.
+In virt-manager: **New VM** → *Local install media* → pick the ISO, use
+**UEFI** firmware and the `default` NAT network.
 
 | Distro | Recommended ISO | Note |
 |---|---|---|
 | Ubuntu | 24.04.x LTS Desktop (amd64) | ships GNOME/Wayland and the Firefox snap |
-| Debian | 13 "trixie" GNOME (live or netinst + GNOME task) | netinst: tick **GNOME** in tasksel |
+| Debian GNOME | 13 "trixie" (live or netinst + GNOME task) | netinst: tick **GNOME** in tasksel; leave the root password empty so the user gets `sudo` |
+| Debian KDE | 13 "trixie" KDE live | Plasma 6.3.6; there is no GNOME shortcut schema |
 
-- 4 GB RAM, 25 GB disk, UEFI firmware.
-- Log in to the **GNOME (Wayland)** session — the default on both.
+- 4 GB RAM, 25 GB disk, UEFI firmware (6 GB / 30 GB for the Ubuntu live
+  installer).
+- Log in to the **Wayland** session — the default on all three.
 - Do **not** redirect the keyboard yet (section 5).
 
 ---
@@ -48,27 +51,27 @@ Ubuntu 24.04 has `wtype` in universe and `chromium-browser` as the snap wrapper.
 
 ## 3. Get the code into the VM
 
-Boxes uses user-mode networking: the host is the VM's gateway (usually
-`10.0.2.2`).
+libvirt's `default` network uses NAT: the host is the gateway, normally
+`192.168.122.1` (`ip -brief addr show virbr0`).
 
 On the **host**:
 
 ```bash
 cd ~/development/keychron-assist-linux
 tar czf /tmp/kassist.tar.gz .
-cd /tmp && python3 -m http.server 8000
+python3 -m http.server 8000 --bind 192.168.122.1 --directory /tmp
 ```
 
 In the **VM**:
 
 ```bash
 mkdir -p ~/kassist && cd ~/kassist
-curl -fLo kassist.tar.gz http://10.0.2.2:8000/kassist.tar.gz
+curl -fLo kassist.tar.gz http://192.168.122.1:8000/kassist.tar.gz
 tar xzf kassist.tar.gz
 ```
 
-If `10.0.2.2` does not answer, find the gateway with `ip route | grep default`
-— the host is that address.
+If `192.168.122.1` does not answer, find the gateway with
+`ip route | grep default` — the host is that address.
 
 ---
 
@@ -82,6 +85,10 @@ cd ~/kassist
 No `sudo`. The installer copies the binary, creates the per-user
 `kassist.service`, registers the `launcherassist://` handler and the GNOME
 shortcuts, and finishes by running `doctor`.
+
+On a desktop without the GNOME media-keys schema (KDE Plasma, sway, ...) the
+installer automatically falls back to the evdev backend instead of failing;
+finish with `sudo ./install.sh --rules` to grant keyboard access.
 
 ### WebHID permission (once, with sudo)
 
@@ -110,11 +117,12 @@ slots 1–3 in the test.
 
 ## 5. End-to-end test (keyboard redirected)
 
-Boxes: **Preferences → Devices & Shares → USB Devices** → enable the Keychron.
+virt-manager: **Virtual Machine → Redirect USB Device** → select the Keychron.
+Put the keyboard in **Cable** mode first (Bluetooth does not show up as USB).
 
 > The keyboard now belongs to the VM; the host loses it while it is redirected.
-> The mouse stays on the host, so you can switch it back from the Boxes window.
-> If you have a second USB keyboard, use it on the host so you are never
+> The mouse stays on the host, so you can switch it back from the virt-manager
+> window. If you have a second USB keyboard, use it on the host so you are never
 > locked out.
 
 In the VM:

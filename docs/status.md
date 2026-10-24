@@ -219,6 +219,19 @@ verified behaviour:
 - `--version`, `--help`, `doctor` right after a service restart (no false
   negative).
 
+- **Three libvirt VMs** (virt-manager, disks under `/mnt/ssd256/VMs`), all
+  Wayland with autologin: Debian 13 GNOME, Debian 13 KDE (Plasma 6.3.6) and
+  Ubuntu 24.04.
+  - `tests/ci.sh` (headless protocol): **PASS** on all three; `selftest
+    --simulate`: **0 failures** on all three after install.
+  - `./install.sh` on GNOME/Ubuntu: 3 shortcuts, service active, handler and
+    port 40003 OK; `doctor`/`selftest` 0 failures.
+  - Debian KDE: `./install.sh` (no flags) detects the missing GNOME schema and
+    **falls back to the evdev backend** instead of aborting; `doctor`/`selftest`
+    report 0 failures.
+  - Not verified yet: the physical key and the real site inside the guests
+    (needs USB redirection; see 7.1).
+
 ### What was only checked from repositories (Podman containers)
 
 - Debian 13: `python3 3.13.5`, `libglib2.0-bin`, `xdg-utils`,
@@ -234,14 +247,22 @@ covers.
 
 ## 7. Pending work (in suggested order)
 
-### 7.1 Immediate — test on Debian/Ubuntu (GNOME Boxes)
+### 7.1 Immediate — graphical test in the VMs
 
-Full guide: [`docs/vm-testing.md`](vm-testing.md).
-Summary: Ubuntu 24.04 and/or Debian 13 GNOME, install deps, copy the repo via
-`http://10.0.2.2:8000` (host), `./install.sh`, `sudo ./install.sh --rules`,
-redirect the Keychron in **Preferences → Devices & Shares → USB**, save the
-binding on the site and press the key. Collect `python3 tools/selftest.py >
-~/selftest.txt`.
+The lab is up on the Fedora host: three libvirt VMs (disks under
+`/mnt/ssd256/VMs`), autologin as `conrado`, `openssh-server`, Chromium and
+`wtype` installed, repo copied to `~/kassist`, and `./install.sh` already
+validated (section 6). Guide: [`docs/vm-testing.md`](vm-testing.md).
+
+Remaining:
+
+1. Redirect the Keychron in **Virtual Machine → Redirect USB Device** (keyboard
+   in **Cable** mode) to the Debian GNOME guest.
+2. Open <https://launcher.keychron.com> in Chromium, save a Quick Start binding
+   and press the key; confirm `journalctl --user -u kassist` shows the launch.
+3. Repeat on Ubuntu 24.04 (snap Chromium → portal) and on Debian KDE
+   (`--udev`).
+4. Collect `python3 tools/selftest.py > ~/selftest.txt` from each guest.
 
 Known points of attention:
 
@@ -337,14 +358,14 @@ instance use `fuser -k 40006/tcp`.
 ## 10. File map
 
 ```
-kassist.py                          daemon + CLI (901 lines, stdlib only)
+kassist.py                          daemon + CLI (stdlib only)
 install.sh                          installer (--udev, --rules, --uninstall)
 tests/smoke.py                      protocol test (raw WS client)
 tools/selftest.py                   environment diagnostics + --simulate
 tools/keypeek.py                    shows the key's keyval/keycode
 tests/ci.sh                         headless test slice used by CI
 .github/workflows/ci.yml            CI: syntax, shellcheck, protocol, distros
-docs/vm-testing.md                  GNOME Boxes guide (Debian/Ubuntu)
+docs/vm-testing.md                  virt-manager guide (Debian/Ubuntu/KDE)
 docs/status.md                      this document
 README.md                           overview, protocol, distro matrix
 LICENSE                             MIT

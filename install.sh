@@ -40,6 +40,11 @@ EOF
 
 die() { echo "error: $*" >&2; exit 1; }
 
+have_gnome_schema() {
+  command -v gsettings >/dev/null 2>&1 &&
+    gsettings list-schemas 2>/dev/null | grep -qx 'org.gnome.settings-daemon.plugins.media-keys'
+}
+
 for arg in "$@"; do
   case "$arg" in
     --udev) MODE=udev; INSTALL_RULES=1 ;;
@@ -90,6 +95,13 @@ if [ ${#missing[@]} -gt 0 ]; then
   exit 1
 fi
 
+# Without the GNOME media-keys schema the shortcut backend cannot work; use
+# evdev instead of failing in setup-shortcuts (KDE, sway, headless, ...).
+if [ "$MODE" = gnome ] && ! have_gnome_schema; then
+  echo "==> no GNOME shortcut backend on this system; using the evdev backend"
+  MODE=udev
+fi
+
 # --------------------------------------------------------------------- binary
 echo "==> installing $BIN"
 mkdir -p "$BIN_DIR" "$UNIT_DIR" "$APP_DIR"
@@ -132,12 +144,10 @@ fi
 # -------------------------------------------------------------------- backend
 if [ "$MODE" = udev ]; then
   echo "==> evdev backend enabled (5 slots, independent of XKB)"
+  if [ "$INSTALL_RULES" = 0 ]; then
+    echo "  note: allow the keyboard with: sudo ./install.sh --rules"
+  fi
 else
-  case "${XDG_CURRENT_DESKTOP:-}" in
-    *GNOME*) ;;
-    "") echo "  warning: no graphical session detected; shortcuts need GNOME" ;;
-    *) echo "  warning: '$XDG_CURRENT_DESKTOP' is not GNOME; use --udev (needs sudo) if the shortcuts do not work" ;;
-  esac
   echo "==> registering GNOME shortcuts"
   "$BIN" setup-shortcuts --binary "$BIN"
 

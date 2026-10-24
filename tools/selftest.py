@@ -132,17 +132,22 @@ def main() -> int:
     add(OK if usable else FAIL, "keys in XKB",
         ", ".join(f"{s}={k}" for s, k in usable.items()) or "none")
 
-    paths = subprocess.run(["gsettings", "get", kassist.SCHEMA, "custom-keybindings"],
-                           capture_output=True, text=True).stdout
-    registered = kassist.parse_paths(paths)
-    bad = []
-    for slot, keyval in usable.items():
-        path = f"{kassist.SHORTCUT_BASE}kassist-{slot.lower()}/"
-        binding = run("gsettings", "get", f"{kassist.SCHEMA}.custom-keybinding:{path}", "binding").strip("'")
-        if path not in registered or binding != keyval:
-            bad.append(slot)
-    add(OK if not bad else FAIL, "GNOME shortcuts",
-        f"{len(usable) - len(bad)}/{len(usable)}" + (f" (missing: {', '.join(bad)})" if bad else ""))
+    if kassist.installed_backend() == "evdev":
+        add(WARN, "GNOME shortcuts", "not used (evdev backend)")
+    elif not kassist.gnome_schema_available():
+        add(WARN, "GNOME shortcuts", "not available (no GNOME shortcut backend)")
+    else:
+        paths = subprocess.run(["gsettings", "get", kassist.SCHEMA, "custom-keybindings"],
+                               capture_output=True, text=True).stdout
+        registered = kassist.parse_paths(paths)
+        bad = []
+        for slot, keyval in usable.items():
+            path = f"{kassist.SHORTCUT_BASE}kassist-{slot.lower()}/"
+            binding = run("gsettings", "get", f"{kassist.SCHEMA}.custom-keybinding:{path}", "binding").strip("'")
+            if path not in registered or binding != keyval:
+                bad.append(slot)
+        add(OK if not bad else FAIL, "GNOME shortcuts",
+            f"{len(usable) - len(bad)}/{len(usable)}" + (f" (missing: {', '.join(bad)})" if bad else ""))
 
     hidraw = kassist.keychron_hidraw_nodes()
     writable = [n for n in hidraw if os.access(n, os.W_OK)]
