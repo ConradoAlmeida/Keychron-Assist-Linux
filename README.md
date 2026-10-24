@@ -142,6 +142,9 @@ Then open `https://launcher.keychron.com` in a **Chromium/Chrome** browser
 (Firefox blocks `ws://` from an https page), connect the keyboard over USB and
 go to **Quick Start**.
 
+On Ubuntu, use the Google Chrome `.deb`: the Chromium snap cannot open
+`/dev/hidraw` (no `hidraw` slot), so WebHID cannot program the key.
+
 ## Commands
 
 ```bash

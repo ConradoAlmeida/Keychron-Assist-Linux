@@ -31,11 +31,14 @@ In virt-manager: **New VM** → *Local install media* → pick the ISO, use
 ```bash
 sudo apt update
 sudo apt install -y python3 libglib2.0-bin xdg-utils desktop-file-utils zenity wtype
-sudo snap install chromium
+wget -qO /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+sudo apt install -y /tmp/chrome.deb
 ```
 
 > The Launcher requires a Chromium/Chrome browser. **Firefox does not work**
-> (it blocks `ws://` from an https page).
+> (it blocks `ws://` from an https page). On Ubuntu use the **Chrome `.deb`**:
+> the Chromium snap cannot open `/dev/hidraw` (`snap "snapd" has no "hidraw"
+> interface slots`), so WebHID fails there.
 
 **Debian:**
 

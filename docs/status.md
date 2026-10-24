@@ -179,6 +179,15 @@ Mutter does not expose `zwp_virtual_keyboard_v1`, so `wtype` fails with
 `KEY_F16` → XKB `XF86Launch7` → GNOME shortcut → `kassist trigger F16` →
 `gnome-calculator` launched. On wlroots/KDE, `wtype` is used.
 
+### 5.7 Ubuntu's Chromium snap cannot use WebHID
+
+The chromium snap declares a `hidraw` plug, but snapd provides no slot:
+`snap connect chromium:hidraw` fails with `snap "snapd" has no "hidraw"
+interface slots`, and the browser never opens `/dev/hidraw*`. The site connects
+but cannot program the key. Google Chrome from the `.deb` (unconfined) works:
+verified on Ubuntu 24.04 — the site saved F16 → Calculator and the physical key
+opened it. Use the Chrome `.deb` on Ubuntu until the snap exposes the interface.
+
 ---
 
 ## 6. What was done in the distribution refactor
@@ -242,8 +251,12 @@ verified behaviour:
     `KEY_F16` → `XF86Launch7` → shortcut → `kassist trigger F16` →
     `gnome-calculator` (new `tools/keysim.py`, because wtype cannot inject on
     Mutter).
-  - Not verified yet: the physical key and the real site inside the guests
-    (needs USB redirection; see 7.1).
+  - Debian GNOME: **real end-to-end** — site connected to the V6 Max (WebHID),
+    binding F16 → Calculator saved and the physical key opened the app.
+  - Ubuntu 24.04: **real end-to-end** with Google Chrome (.deb): the site saved
+    F16 → Calculator and the physical key opened it. The Chromium snap cannot
+    do WebHID (section 5.7).
+  - Not verified yet: Debian KDE (`--udev` with the physical key); see 7.1.
 
 ### What was only checked from repositories (Podman containers)
 
@@ -269,19 +282,16 @@ validated (section 6). Guide: [`docs/vm-testing.md`](vm-testing.md).
 
 Remaining:
 
-1. Redirect the Keychron in **Virtual Machine → Redirect USB Device** (keyboard
-   in **Cable** mode) to the Debian GNOME guest.
-2. Open <https://launcher.keychron.com> in Chromium, save a Quick Start binding
-   and press the key; confirm `journalctl --user -u kassist` shows the launch.
-3. Repeat on Ubuntu 24.04 (snap Chromium → portal) and on Debian KDE
-   (`--udev`).
-4. Collect `python3 tools/selftest.py > ~/selftest.txt` from each guest.
+1. Redirect the Keychron to the **Debian KDE** guest and validate `--udev`: the
+   daemon reads evdev directly (no shortcut), while the site still saves the
+   binding through WebHID.
+2. Collect `python3 tools/selftest.py > ~/selftest.txt` from each guest.
 
 Known points of attention:
 
 - 3 slots in GNOME mode (no `<FK19>`) — expected, not a bug;
-- Chromium on Ubuntu is a snap: the `launcherassist://` `xdg-open` goes through
-  the portal — the most likely thing to break;
+- **Ubuntu:** the Chromium snap cannot open `/dev/hidraw` (no `hidraw` slot in
+  snapd) — use the Google Chrome `.deb` (5.7);
 - without the hidraw rule the site cannot save (section 5.2).
 
 ### 7.2 Packaging
