@@ -1,0 +1,14 @@
+[Unit]
+Description=Keychron Assist for Linux (local helper for launcher.keychron.com)
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=@EXEC@
+Restart=on-failure
+RestartSec=2
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target

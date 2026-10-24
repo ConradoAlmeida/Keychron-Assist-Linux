@@ -1,0 +1,4 @@
+# Permite que o usuário da sessão ativa leia os eventos de entrada dos
+# dispositivos Keychron (necessário para o quick start / Launch APP).
+KERNEL=="event*", SUBSYSTEM=="input", ATTRS{idVendor}=="3434", TAG+="uaccess"
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="3434", TAG+="uaccess"

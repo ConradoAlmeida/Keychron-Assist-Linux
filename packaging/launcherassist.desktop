@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Keychron Assist
+Comment=Local helper for the Keychron Launcher web app
+Exec=@EXEC@ protocol %u
+MimeType=x-scheme-handler/launcherassist;
+NoDisplay=true
+Terminal=false
