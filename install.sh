@@ -95,6 +95,28 @@ if [ ${#missing[@]} -gt 0 ]; then
   exit 1
 fi
 
+# The launcher needs WebHID (/dev/hidraw). Snap and Flatpak builds are
+# confined and cannot open it; point the user to an unconfined build instead
+# of letting the site fail later.
+browser_ok=0
+for b in google-chrome google-chrome-stable chromium chromium-browser microsoft-edge; do
+  p=$(command -v "$b" 2>/dev/null) || continue
+  case "$p" in
+    /snap/*|/var/lib/flatpak/*) ;;
+    *) browser_ok=1 ;;
+  esac
+done
+if [ "$browser_ok" = 0 ]; then
+  echo "==> note: the launcher needs an unconfined Chromium/Chrome (WebHID)"
+  if command -v snap >/dev/null 2>&1 && snap list chromium >/dev/null 2>&1; then
+    echo "    the Chromium snap cannot open /dev/hidraw. Install Google Chrome:"
+    echo "    wget -qO /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
+    echo "    sudo apt install -y /tmp/chrome.deb"
+  else
+    echo "    install Chromium or Google Chrome for the site's WebHID support"
+  fi
+fi
+
 # Without the GNOME media-keys schema the shortcut backend cannot work; use
 # evdev instead of failing in setup-shortcuts (KDE, sway, headless, ...).
 if [ "$MODE" = gnome ] && ! have_gnome_schema; then

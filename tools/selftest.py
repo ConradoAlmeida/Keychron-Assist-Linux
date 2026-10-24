@@ -53,17 +53,29 @@ def first_line(text: str) -> str:
     return text.splitlines()[0] if text else ""
 
 
-def browser() -> str:
+def browser() -> tuple[str, bool, bool]:
+    """Return (description, usable_for_webhid, found).
+
+    Snap/Flatpak builds are confined and cannot open /dev/hidraw, so WebHID
+    cannot program the key even though the browser itself works.
+    """
+    found: list[tuple[str, bool]] = []
     for name in ("chromium", "chromium-browser", "google-chrome", "google-chrome-stable", "microsoft-edge"):
         path = shutil.which(name)
         if path:
-            return f"{name} ({path})"
+            confined = path.startswith(("/snap/", "/var/lib/flatpak/"))
+            found.append((f"{name} ({path})", not confined))
+    for desc, usable in found:
+        if usable:
+            return desc, True, True
+    if found:
+        return f"{found[0][0]} [confined: no hidraw]", False, True
     if shutil.which("flatpak"):
         refs = run("flatpak", "list", "--app", "--columns=application")
         for line in refs.splitlines():
             if "chromium" in line.lower():
-                return f"flatpak {line.strip()}"
-    return "no Chromium-based browser found"
+                return f"flatpak {line.strip()} [confined: no hidraw]", False, True
+    return "no Chromium-based browser found", False, False
 
 
 def procs() -> dict[int, str]:
@@ -125,7 +137,13 @@ def main() -> int:
             add(OK, f"cmd {cmd}", found)
         else:
             add(WARN if optional else FAIL, f"cmd {cmd}", "optional" if optional else "required")
-    add(OK if "no Chromium" not in (b := browser()) else FAIL, "browser", b)
+    bdesc, busable, bfound = browser()
+    if not bfound:
+        add(FAIL, "browser", bdesc)
+    elif busable:
+        add(OK, "browser", bdesc)
+    else:
+        add(WARN, "browser", bdesc + " — use Chrome/Chromium .deb for WebHID")
 
     service = run("systemctl", "--user", "is-active", "kassist")
     add(OK if service == "active" else FAIL, "kassist service", service or "stopped")
