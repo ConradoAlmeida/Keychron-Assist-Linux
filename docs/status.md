@@ -394,6 +394,7 @@ tests/ci.sh                         headless test slice used by CI
 docs/vm-testing.md                  virt-manager guide (Debian/Ubuntu/KDE)
 docs/status.md                      this document
 README.md                           overview, protocol, distro matrix
+SECURITY.md                         security policy and contact
 LICENSE                             MIT
 packaging/kassist.service           systemd --user unit (template @EXEC@)
 packaging/launcherassist.desktop    URI handler (template @EXEC@)
