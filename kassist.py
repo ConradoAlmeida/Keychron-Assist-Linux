@@ -38,13 +38,13 @@ from pathlib import Path
 
 APP_ID = "keychron-assist-linux"
 VERSION = "0.1.0"
-# versão que o site espera do Keychron Assist (1.1.2+ habilita "abrir app")
+# version the website expects from Keychron Assist (1.1.2+ enables "open app")
 ASSIST_VERSION = "1.1.6"
 DEFAULT_PORT = 40003
-PORT = DEFAULT_PORT  # compatibilidade
+PORT = DEFAULT_PORT  # backwards compatibility
 KEYCHRON_VID = "3434"
 
-# só estas origens podem falar com o serviço (evita que qualquer site o use)
+# only these origins may talk to the service (keeps arbitrary websites out)
 ALLOWED_ORIGINS = {
     "https://launcher.keychron.com",
     "https://www.launcher.keychron.com",
@@ -310,7 +310,7 @@ class Client:
             length = struct.unpack(">H", await self.reader.readexactly(2))[0]
         elif length == 127:
             length = struct.unpack(">Q", await self.reader.readexactly(8))[0]
-        if length > 1 << 20:  # 1 MiB: nada legítimo chega perto disso
+        if length > 1 << 20:  # 1 MiB: nothing legitimate comes close
             raise ValueError("frame too large")
         mask = await self.reader.readexactly(4) if masked else b""
         payload = await self.reader.readexactly(length) if length else b""
@@ -341,7 +341,7 @@ class Server:
             return None
 
     def path_allowed(self, path: str) -> bool:
-        """Só abre apps que o próprio site listou (ou um .desktop da lista de menus)."""
+        """Only launch apps the site itself listed (or a .desktop from the menu dirs)."""
         if not path or path.startswith("-"):
             return False
         if path in self.allowed_paths:
@@ -534,7 +534,7 @@ def keychron_event_nodes() -> list[str]:
 
 
 def keychron_hidraw_nodes() -> list[str]:
-    """Nós /dev/hidraw do teclado — o site precisa deles para gravar a tecla."""
+    """/dev/hidraw nodes of the keyboard — the site needs them to write the key."""
     nodes = []
     for entry in sorted(Path("/sys/class/hidraw").glob("hidraw*")):
         try:
@@ -584,7 +584,7 @@ async def watch_keyboard(store: Store, sniff: bool) -> None:
             except OSError as exc:
                 if node not in warned:
                     warned.add(node)
-                    log(f"{node}: {exc.strerror} (instale a regra udev ou use atalhos)")
+                    log(f"{node}: {exc.strerror} (install the udev rule or use shortcuts)")
                 continue
             watched[node] = fd
             loop.add_reader(fd, lambda fd=fd, node=node: handle(fd, node))
@@ -618,7 +618,7 @@ SHORTCUT_BASE = "/org/gnome/settings-daemon/plugins/media-keys/custom-keybinding
 
 
 def system_keyvals() -> dict[str, str]:
-    """slot -> keyval entregue pelo compositor para FK16..FK20."""
+    """slot -> keyval delivered by the compositor for FK16..FK20."""
     try:
         text = XKB_INET.read_text(errors="replace")
     except OSError:
@@ -675,8 +675,8 @@ def setup_shortcuts(binary: str, verbose: bool = True) -> int:
         path = f"{SHORTCUT_BASE}kassist-{slot.lower()}/"
         if not keyval or keyval.startswith(XKB_OWNED_PREFIXES):
             if verbose:
-                why = "sem keyval no XKB" if not keyval else f"{keyval} já é usado pelo sistema"
-                print(f"  {slot}: {why}, pulando")
+                why = "no keyval in XKB" if not keyval else f"{keyval} is already used by the system"
+                print(f"  {slot}: {why}, skipping")
             if path in paths:
                 paths.remove(path)
                 changed = True
@@ -689,12 +689,12 @@ def setup_shortcuts(binary: str, verbose: bool = True) -> int:
         gsettings_set(path, "command", f"{binary} trigger {slot}")
         gsettings_set(path, "binding", keyval)
         if verbose:
-            print(f"  {slot} (tecla {keyval}) -> {binary} trigger {slot}")
+            print(f"  {slot} (key {keyval}) -> {binary} trigger {slot}")
         registered += 1
     if changed:
         write_paths(paths)
     if verbose:
-        print(f"{registered} atalhos registrados")
+        print(f"{registered} shortcuts registered")
     return registered
 
 
@@ -706,7 +706,7 @@ def remove_shortcuts(verbose: bool = True) -> int:
     for path in removed:
         reset_shortcut(path)
     if verbose:
-        print(f"{len(removed)} atalhos removidos")
+        print(f"{len(removed)} shortcuts removed")
     return len(removed)
 
 
@@ -769,7 +769,7 @@ def is_running(port: int = DEFAULT_PORT) -> bool:
 
 
 def wait_running(port: int = DEFAULT_PORT, timeout: float = 3.0) -> bool:
-    """O serviço leva ~1s para escanear os apps antes de abrir a porta."""
+    """The service takes ~1s to scan apps before opening the port."""
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if is_running(port):
@@ -788,13 +788,13 @@ def cmd_doctor(args: argparse.Namespace) -> int:
     listening = wait_running()
     active = subprocess.run(["systemctl", "--user", "is-active", "kassist"],
                             capture_output=True, text=True).stdout.strip() == "active"
-    check(listening, "serviço escutando em 127.0.0.1:%d" % DEFAULT_PORT,
-          "" if listening else ("não respondeu em 3s (veja o journal)"
-                                if active else "parado: systemctl --user start kassist"))
+    check(listening, "service listening on 127.0.0.1:%d" % DEFAULT_PORT,
+          "" if listening else ("no response in 3s (check the journal)"
+                                if active else "stopped: systemctl --user start kassist"))
 
     handler = subprocess.run(["xdg-mime", "query", "default", "x-scheme-handler/launcherassist"],
                              capture_output=True, text=True).stdout.strip()
-    check(bool(handler), "handler launcherassist://", handler or "rode ./install.sh")
+    check(bool(handler), "launcherassist:// handler", handler or "run ./install.sh")
 
     keyvals = system_keyvals()
     active = {slot: kv for slot, kv in keyvals.items() if kv and not kv.startswith(XKB_OWNED_PREFIXES)}
@@ -807,7 +807,7 @@ def cmd_doctor(args: argparse.Namespace) -> int:
                                  capture_output=True, text=True).stdout.strip().strip("'")
         if path not in paths or binding != keyval:
             missing.append(slot)
-    check(not missing, "atalhos do compositor", "faltando: " + ", ".join(missing) if missing else
+    check(not missing, "compositor shortcuts", "missing: " + ", ".join(missing) if missing else
           f"{len(active)} slots: " + ", ".join(f"{s} ({k})" for s, k in active.items()))
 
     store = Store()
@@ -817,21 +817,21 @@ def cmd_doctor(args: argparse.Namespace) -> int:
         target = data.get("path") or ""
         if bind.get("opt_type") == "App" and target and not Path(target).exists():
             broken.append(target)
-    check(not broken, "apps das bindings existem", "; ".join(broken))
-    check(bool(store.all()), "alguma binding gravada",
-          "configure uma no Quick Start", optional=True)
+    check(not broken, "app paths in bindings exist", "; ".join(broken))
+    check(bool(store.all()), "at least one binding saved",
+          "set one up in Quick Start", optional=True)
 
     devices = keychron_event_nodes()
     readable = [n for n in devices if os.access(n, os.R_OK)]
-    check(bool(readable), "backend evdev (opcional)",
-          f"{len(readable)}/{len(devices)} dispositivos legíveis" if devices else "sem teclado Keychron",
+    check(bool(readable), "evdev backend (optional)",
+          f"{len(readable)}/{len(devices)} devices readable" if devices else "no Keychron keyboard",
           optional=True)
 
     hidraw = keychron_hidraw_nodes()
     writable = [n for n in hidraw if os.access(n, os.W_OK)]
-    check(bool(writable), "acesso hidraw para o WebHID do site",
-          f"{len(writable)}/{len(hidraw)} nós graváveis" if writable else
-          ("instale a regra: sudo ./install.sh --rules" if hidraw else "teclado não conectado"),
+    check(bool(writable), "hidraw access for the site's WebHID",
+          f"{len(writable)}/{len(hidraw)} nodes writable" if writable else
+          ("install the rule: sudo ./install.sh --rules" if hidraw else "keyboard not connected"),
           optional=True)
 
     failed = 0
@@ -847,35 +847,35 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"%(prog)s {VERSION}")
     sub = parser.add_subparsers(dest="command")
 
-    run = sub.add_parser("run", help="roda o serviço (padrão)")
+    run = sub.add_parser("run", help="run the service (default)")
     run.add_argument("--port", type=int, default=DEFAULT_PORT)
-    run.add_argument("--watch", action="store_true", help="ler o teclado via evdev (precisa de udev)")
-    run.add_argument("--sniff", action="store_true", help="logar eventos crus do teclado")
+    run.add_argument("--watch", action="store_true", help="read the keyboard via evdev (needs udev)")
+    run.add_argument("--sniff", action="store_true", help="log raw keyboard events")
     run.add_argument("--no-icons", action="store_true")
     run.set_defaults(func=cmd_run)
 
-    trigger = sub.add_parser("trigger", help="abre o app de um slot (usado pelos atalhos)")
+    trigger = sub.add_parser("trigger", help="open the app bound to a slot (used by shortcuts)")
     trigger.add_argument("slot", choices=SLOTS)
     trigger.set_defaults(func=cmd_trigger)
 
-    doctor = sub.add_parser("doctor", help="diagnostica a instalação")
+    doctor = sub.add_parser("doctor", help="diagnose the installation")
     doctor.set_defaults(func=cmd_doctor)
 
-    setup = sub.add_parser("setup-shortcuts", help="registra atalhos do compositor")
+    setup = sub.add_parser("setup-shortcuts", help="register compositor shortcuts")
     setup.add_argument("--binary", default=str(Path.home() / ".local/bin/kassist"))
     setup.set_defaults(func=lambda a: 0 if setup_shortcuts(a.binary) else 1)
 
-    remove = sub.add_parser("remove-shortcuts", help="remove os atalhos do compositor")
+    remove = sub.add_parser("remove-shortcuts", help="remove compositor shortcuts")
     remove.set_defaults(func=lambda a: 0 if remove_shortcuts() is not None else 1)
 
-    apps = sub.add_parser("list-apps", help="lista os apps encontrados")
+    apps = sub.add_parser("list-apps", help="list discovered apps")
     apps.set_defaults(func=cmd_list_apps)
 
-    sniff = sub.add_parser("sniff", help="mostra os eventos crus do teclado")
+    sniff = sub.add_parser("sniff", help="show raw keyboard events")
     sniff.add_argument("--port", type=int, default=DEFAULT_PORT)
     sniff.set_defaults(func=cmd_sniff)
 
-    proto = sub.add_parser("protocol", help="handler de launcherassist://")
+    proto = sub.add_parser("protocol", help="launcherassist:// URI handler")
     proto.add_argument("uri", nargs="?")
     proto.set_defaults(func=cmd_protocol)
 
@@ -889,7 +889,7 @@ def main(argv: list[str] | None = None) -> int:
     if argv and argv[0] in ("-h", "--help", "--version"):
         pass
     elif not argv or argv[0] not in commands:
-        if argv and argv[0] == "--protocol":  # compatibilidade com a v0
+        if argv and argv[0] == "--protocol":  # backwards compatibility with the first release
             argv = ["protocol"] + argv[1:]
         else:
             argv = ["run"] + argv

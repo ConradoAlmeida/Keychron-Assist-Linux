@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Smoke test do serviço kassist (sem navegador e sem teclado).
+"""Smoke test for the kassist service (no browser, no keyboard).
 
-    python3 tests/smoke.py              # serviço já rodando na porta padrão
-    python3 tests/smoke.py --port 40004 # instância de teste
+    python3 tests/smoke.py              # service already on the default port
+    python3 tests/smoke.py --port 40004 # throwaway test instance
 
-Verifica: handshake, GetVersion, Get, Add/Get/Remove de binding, rejeição de
-origem estranha e recusa de executar caminho fora da lista de apps.
+Covers: handshake, GetVersion, Get, Add/Get/Remove of a binding, rejection of a
+foreign origin and refusal to run a path outside the app list.
 """
 
 from __future__ import annotations
@@ -68,12 +68,12 @@ async def main() -> int:
     ok = True
 
     status, reader, writer = await handshake(args.port, "https://evil.example")
-    print("origem estranha ->", status)
+    print("foreign origin ->", status)
     ok &= "403" in status
     writer.close()
 
     status, reader, writer = await handshake(args.port, GOOD_ORIGIN)
-    print("origem do launcher ->", status)
+    print("launcher origin ->", status)
     ok &= "101" in status
 
     await send(writer, "Common", "GetVersion")
@@ -92,7 +92,7 @@ async def main() -> int:
             apps.append(body["data"])
         elif body["action"] == "FetchEnd":
             break
-    print(f"Get -> {len(apps)}/{total} apps, primeiro: {apps[0]['name']}")
+    print(f"Get -> {len(apps)}/{total} apps, first: {apps[0]['name']}")
     ok &= total == len(apps) > 0 and "icon_path" in apps[0]
 
     target = next(a for a in apps if a["path"].endswith(".desktop"))

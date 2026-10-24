@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Mostra qual tecla o teclado realmente envia (sem root, GTK4 + Wayland).
+"""Show which key the keyboard really sends (no root, GTK4 + Wayland).
 
-Uso: python3 tools/keypeek.py
-Clique na janela e aperte a tecla. O nome do keyval é o que o GNOME recebe —
-é exatamente isso que precisa ser F16 para o Quick Start funcionar.
+Usage: python3 tools/keypeek.py
+Click the window and press the key. The keyval name is what GNOME receives —
+that is exactly what has to be F16 for Quick Start to work.
 """
 
 import gi
@@ -12,7 +12,7 @@ gi.require_version("Gdk", "4.0")
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gdk, GLib, Gtk  # noqa: E402
 
-WINDOW_TEXT = "Aperte a tecla que você configurou"
+WINDOW_TEXT = "Press the key you configured"
 
 
 class KeyPeek(Gtk.ApplicationWindow):
@@ -46,7 +46,7 @@ class KeyPeek(Gtk.ApplicationWindow):
         entry = (f"<b>{GLib.markup_escape_text(display)}</b>\n"
                  f"keyval: {GLib.markup_escape_text(name)}  ·  keycode: {keycode}")
         self.key.set_markup(entry)
-        self.detail.set_text("copie isso na conversa se não for F16")
+        self.detail.set_text("copy this if it is not F16")
         return False
 
 

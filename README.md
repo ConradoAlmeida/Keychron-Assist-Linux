@@ -1,44 +1,44 @@
-# Keychron Assist para Linux (não oficial)
+# Keychron Assist for Linux (unofficial)
 
-O Keychron Launcher (`https://launcher.keychron.com`) tem um recurso chamado
-**Quick Start → Launch APP**, que abre programas com uma tecla do teclado.
-No Windows e no macOS esse recurso depende do utilitário **Keychron Assist**,
-que não existe para Linux. Este projeto implementa um substituto livre.
+The Keychron Launcher (`https://launcher.keychron.com`) has a feature called
+**Quick Start → Launch APP** that opens programs with a key on the keyboard.
+On Windows and macOS that feature relies on the **Keychron Assist** utility,
+which does not exist for Linux. This project is a free replacement.
 
-Documentação de retomada (o que está pronto, o que falta, decisões e
-armadilhas): [`docs/estado-atual.md`](docs/estado-atual.md).
+Project status and handoff notes (what works, what is left, decisions and
+gotchas): [`docs/status.md`](docs/status.md).
 
-Status: **funcional, sem root** no Fedora 44 (GNOME 50, Wayland). Lista de apps,
-busca, ícones, gravação da binding e disparo pela tecla física foram validados.
-Debian/Ubuntu: pacotes e keymap conferidos, falta o teste em sessão gráfica
-(roteiro em [`docs/vm-testing.pt-BR.md`](docs/vm-testing.pt-BR.md)).
+Status: **works, no root** on Fedora 44 (GNOME 50, Wayland). App list, search,
+icons, binding writes and triggering from the physical key have been verified.
+Debian/Ubuntu: packages and keymap checked; the graphical-session test is
+pending (guide in [`docs/vm-testing.md`](docs/vm-testing.md)).
 
-| distro | GNOME/Wayland | slots utilizáveis (modo GNOME) | situação |
+| distro | GNOME/Wayland | usable slots (GNOME mode) | state |
 |---|---|---|---|
-| Fedora 44 | 50.6 | **4** (F16–F19) | testado com teclado real |
-| Debian 13 | 48 | **3** (F16–F18) | pacotes e XKB conferidos |
-| Ubuntu 24.04 LTS | 46 | **3** (F16–F18) | pacotes e XKB conferidos |
+| Fedora 44 | 50.6 | **4** (F16–F19) | tested with the real keyboard |
+| Debian 13 | 48 | **3** (F16–F18) | packages and XKB checked |
+| Ubuntu 24.04 LTS | 46 | **3** (F16–F18) | packages and XKB checked |
 
-O número de slots depende do `xkeyboard-config` (detalhe abaixo), não do
-projeto.
+The number of slots depends on `xkeyboard-config` (see below), not on this
+project.
 
-## Como o Launcher conversa com o Assist
+## How the Launcher talks to the Assist
 
-Tudo foi descoberto lendo o bundle JS do site (`main.*.js`). O protocolo é
-simples e não tem autenticação:
+Everything was discovered by reading the site's JS bundle (`main.*.js`). The
+protocol is simple and unauthenticated:
 
 ```
 ws://localhost:40003
 ```
 
-Cada mensagem é JSON:
+Every message is JSON:
 
 ```json
 {"evt_type": "QuickStart" | "Common" | "SysCmd",
- "evt_data": {"cmd": "<comando>", "data": <payload>}}
+ "evt_data": {"cmd": "<command>", "data": <payload>}}
 ```
 
-| comando | direção | resposta esperada |
+| command | direction | expected reply |
 |---|---|---|
 | `GetVersion` (Common) | site → app | `{"cmd":"GetVersion","data":{"version":"1.1.6"}}` |
 | `Get` | site → app | streaming: `FetchStart{count}`, N × `Fetch{data:{name,path,icon,icon_path}}`, `FetchEnd` |
@@ -47,159 +47,161 @@ Cada mensagem é JSON:
 | `GetKeyBinds` | site → app | `[{key, opt_type, opt_data:{name,path,icon,icon_path}}]` |
 | `ClearKeyBind` | site → app | `"Success"` |
 | `SpawnAppByPath` (SysCmd) | site → app | `true`/`false` |
-| `AddApp` / `RemoveApp` / `SelectAppByNative` | site → app | `"Success"` / lista de apps |
-| `SetReceiverVpidMap` / `ClearReceiverVpidMap` | site → app | ignorado no Linux |
+| `AddApp` / `RemoveApp` / `SelectAppByNative` | site → app | `"Success"` / app list |
+| `SetReceiverVpidMap` / `ClearReceiverVpidMap` | site → app | ignored on Linux |
 
-Além disso o site cria um iframe invisível com
-`launcherassist://?background=1` para "acordar" o app local — é esse esquema
-que o instalador registra.
+The site also creates a hidden iframe pointing at
+`launcherassist://?background=1` to wake the local helper — that is the scheme
+the installer registers.
 
-### O detalhe que torna tudo viável
+### The detail that makes it possible
 
-O "slot" de quick start **é um keycode comum de QMK** que o site grava no
-keymap via WebHID. O site usa:
+A quick-start "slot" **is a plain QMK keycode** that the site writes into the
+keymap over WebHID. The site uses:
 
-- 5 primeiros slots: `KC_F16` … `KC_F20`;
-- demais slots (até 50): keycodes vendor (`0x7F00 + i`, usage `0x1CC + i`),
-  usados quando o firmware responde que suporta mais de 5 slots.
+- the first 5 slots: `KC_F16` … `KC_F20`;
+- further slots (up to 50): vendor keycodes (`0x7F00 + i`, usage `0x1CC + i`),
+  used when the firmware reports support for more than 5 slots.
 
-Como F16–F20 são teclas HID padrão, o Linux consegue capturá-las de duas
-formas — nenhuma delas precisa decodificar relatórios vendor do teclado.
+Because F16–F20 are standard HID keys, Linux can capture them in two ways —
+neither needs to decode the keyboard's vendor reports.
 
-## Como a tecla chega no app: dois modos
+## How the key reaches the app: two modes
 
-**Modo GNOME (padrão, sem sudo).** O próprio GNOME captura as teclas como
-atalhos personalizados e executa `kassist trigger F16`. Não é preciso ler
-`/dev/input`: quem tem a permissão é o compositor, que já recebe as teclas.
+**GNOME mode (default, no sudo).** GNOME itself grabs the keys as custom
+shortcuts and runs `kassist trigger F16`. Nothing reads `/dev/input`: the
+compositor already receives the keys and is allowed to.
 
-Atenção ao XKB: a seção `inet` do keymap remapeia F13..F20, então a tecla
-gravada como `F16` chega ao compositor como `XF86Launch7`. O instalador lê
-`/usr/share/X11/xkb/symbols/inet` e registra o atalho no keyval **real** — é
-isso que faz funcionar.
+Mind the XKB mapping: the `inet` section of the keymap remaps F13..F20, so a
+key programmed as `F16` reaches the compositor as `XF86Launch7`. The installer
+reads `/usr/share/X11/xkb/symbols/inet` and registers the shortcut with the
+**real** keyval — that is what makes it work.
 
-| slot | keycode | keyval (xkeyboard-config ≥ 2.47) | keyval (2.42, Debian 13/Ubuntu 24.04) |
+| slot | keycode | keyval (xkeyboard-config ≥ 2.47) | keyval (2.42: Debian 13 / Ubuntu 24.04) |
 |---|---|---|---|
 | F16 | 194 | `XF86Launch7` | `XF86Launch7` |
 | F17 | 195 | `XF86Launch8` | `XF86Launch8` |
 | F18 | 196 | `XF86Launch9` | `XF86Launch9` |
-| F19 | 197 | `F19` | **não definido** → slot inutilizável |
-| F20 | 198 | `XF86AudioMicMute` | `XF86AudioMicMute` → conflita com o mute do microfone |
+| F19 | 197 | `F19` | **not defined** → slot unusable |
+| F20 | 198 | `XF86AudioMicMute` | `XF86AudioMicMute` → clashes with mic mute |
 
-Por isso o instalador **detecta** o que o sistema oferece e registra só os
-slots possíveis, em vez de assumir cinco. `XF86AudioMicMute` é sempre pulado
-para não roubar o atalho do sistema.
+That is why the installer **detects** what the system offers and registers only
+the possible slots instead of assuming five. `XF86AudioMicMute` is always
+skipped so it does not steal the system shortcut.
 
-**Modo udev (`./install.sh --udev`, pede sudo).** O daemon lê
-`/dev/input/event*` direto. Captura **os 5 slots** (F16–F20, sem depender do
-XKB) e é o caminho para os keycodes vendor (`A6`..`A55`). Exige a regra udev,
-porque o kernel nega acesso a teclados de propósito (proteção contra keylogger).
+**udev mode (`./install.sh --udev`, asks for sudo).** The daemon reads
+`/dev/input/event*` directly. It captures **all 5 slots** (F16–F20, no XKB
+dependency) and is the path for the vendor keycodes (`A6`..`A55`). It needs the
+udev rule because the kernel denies access to keyboards on purpose (keylogger
+protection).
 
-## Instalação (sem sudo)
+## Installation (no sudo)
 
 ```bash
 ./install.sh
 ```
 
-O script:
+The script:
 
-1. copia `kassist.py` para `~/.local/bin/kassist`;
-2. instala e habilita o serviço de usuário `kassist.service`;
-3. registra o handler de `launcherassist://` (`~/.local/share/applications`);
-4. registra os atalhos do GNOME chamando `kassist trigger <slot>` (preserva os
-   atalhos que já existirem e ignora slots sem keyval).
+1. copies `kassist.py` to `~/.local/bin/kassist`;
+2. installs and enables the `kassist.service` user unit;
+3. registers the `launcherassist://` handler (`~/.local/share/applications`);
+4. registers the GNOME shortcuts running `kassist trigger <slot>` (preserves
+   existing shortcuts and skips slots without a keyval);
+5. warns if the site cannot reach the keyboard yet.
 
-Dependências: `python3`, `gsettings`/`gio` (`libglib2.0-bin`), `xdg-mime`
-(`xdg-utils`). O script avisa com o comando `apt`/`dnf`/`pacman` correto se
-faltar algo.
+Dependencies: `python3`, `gsettings`/`gio` (`libglib2.0-bin`), `xdg-mime`
+(`xdg-utils`). The script prints the right `apt`/`dnf`/`pacman` command when
+something is missing.
 
-**Uma exceção ao "sem sudo":** o *daemon* não precisa de root, mas o *site*
-precisa de acesso a `/dev/hidraw*` para gravar o keycode no teclado (WebHID).
-Se você nunca instalou as regras do QMK/VIA, rode uma vez:
-
-```bash
-sudo ./install.sh --rules      # só a regra udev, mantém o backend GNOME
-```
-
-Sem isso a lista de apps funciona, mas salvar a binding não tem efeito.
-
-Para desfazer:
+**One exception to "no sudo":** the *daemon* needs no root, but the *site*
+needs access to `/dev/hidraw*` to write the keycode (WebHID). If you never
+installed the QMK/VIA rules, run once:
 
 ```bash
-./install.sh --uninstall          # binário, serviço, handler e atalhos
+sudo ./install.sh --rules      # udev rule only, keeps the GNOME backend
 ```
 
-As bindings continuam em `~/.config/keychron-assist-linux/binds.json`.
+Without it the app list works, but saving a binding has no effect.
 
-Depois abra `https://launcher.keychron.com` em um navegador **Chromium/Chrome**
-(Firefox bloqueia `ws://` a partir de uma página `https`), conecte o teclado por
-cabo e vá em **Quick Start**.
-
-## Comandos
+To undo:
 
 ```bash
-kassist run                     # serviço em foreground (padrão sem argumento)
-kassist trigger F16             # abre o app do slot (usado pelos atalhos)
-kassist doctor                  # diagnostica instalação/serviço/atalhos/bindings
-kassist setup-shortcuts         # (re)registra os atalhos do GNOME
-kassist remove-shortcuts        # remove os atalhos do GNOME
-kassist list-apps               # lista os apps encontrados
-kassist run --watch --sniff     # modo udev: mostra os eventos crus do teclado
-kassist run --no-icons          # lista de apps sem ícones (mais rápido)
-kassist protocol 'launcherassist://?background=1'   # handler de URI
+./install.sh --uninstall          # binary, service, handler and shortcuts
 ```
 
-Sem instalar nada:
+Bindings are kept in `~/.config/keychron-assist-linux/binds.json`.
+
+Then open `https://launcher.keychron.com` in a **Chromium/Chrome** browser
+(Firefox blocks `ws://` from an https page), connect the keyboard over USB and
+go to **Quick Start**.
+
+## Commands
+
+```bash
+kassist run                     # service in the foreground (default with no args)
+kassist trigger F16             # open the app bound to a slot (used by shortcuts)
+kassist doctor                  # diagnose install/service/shortcuts/bindings
+kassist setup-shortcuts         # (re)register the GNOME shortcuts
+kassist remove-shortcuts        # remove the GNOME shortcuts
+kassist list-apps               # list discovered apps
+kassist run --watch --sniff     # udev mode: show raw keyboard events
+kassist run --no-icons          # app list without icons (faster)
+kassist protocol 'launcherassist://?background=1'   # URI handler
+```
+
+Without installing anything:
 
 ```bash
 python3 kassist.py list-apps
-python3 tests/smoke.py                 # protocolo, sem navegador
-python3 tools/selftest.py              # ambiente + instalação
-python3 tools/selftest.py --simulate   # injeta a tecla com wtype (VM)
+python3 tests/smoke.py                 # protocol, no browser
+python3 tools/selftest.py              # environment + installation
+python3 tools/selftest.py --simulate   # injects the key with wtype (VM)
 ```
 
-## Segurança
+## Security
 
-O serviço escuta só em `127.0.0.1`. Além disso:
+The service listens on `127.0.0.1` only. In addition:
 
-- **Origem**: conexões WebSocket com cabeçalho `Origin` de outro site são
-  recusadas com `403` — um site malicioso aberto no navegador não consegue
-  falar com o daemon (era o risco real, já que `localhost` é alcançável por
-  qualquer página).
-- **Execução**: `SpawnAppByPath` só abre `.desktop` que o site listou ou que
-  esteja num diretório de aplicações; `AddKeyBind` só aceita `App` (`.desktop`)
-  ou `Url` (`http`/`https`). Nada de executar caminho arbitrário.
+- **Origin**: WebSocket connections whose `Origin` header is another site are
+  refused with `403` — a malicious page open in the browser cannot talk to the
+  daemon (that was the real risk, since any page can reach `localhost`).
+- **Execution**: `SpawnAppByPath` only opens a `.desktop` the site listed or one
+  inside an application directory; `AddKeyBind` only accepts `App` (`.desktop`)
+  or `Url` (`http`/`https`). No arbitrary path execution.
 
-## Limitações
+## Limitations
 
-- **Slots.** F16–F20 são o conjunto que o firmware libera quando não anuncia os
-  50 extras. O modo GNOME fica com 3 ou 4 slots (tabela acima); o modo udev tem
-  os 5. Os slots `A6`..`A55` usam keycodes vendor que o GNOME não sabe
-  expressar; precisariam do modo udev + mapeamento via `--sniff`.
-- **A tecla não é "F16" de verdade.** F16/F17/F18 chegam como
-  `XF86Launch7/8/9`. Se criar atalhos à mão no GNOME, use esses nomes.
-- **Um atalho por slot.** Os atalhos do GNOME são globais: a tecla abre o app
-  independentemente do perfil/camada ativa no teclado.
-- **Receptor 2.4 GHz** (`SetReceiverVpidMap`) é ignorado; o pareamento
-  teclado↔receptor do Assist original não é replicado. Use cabo.
-- **Não oficial.** O protocolo pode mudar sem aviso em qualquer atualização do
-  Launcher. `kassist doctor` e `tools/selftest.py` ajudam a localizar a quebra.
-- **Privacidade (modo udev).** A regra udev dá ao seu usuário acesso de leitura
-  ao teclado (igual a `keyd`/`kanata`). No modo GNOME isso não existe.
+- **Slots.** F16–F20 are the set the firmware exposes when it does not announce
+  the 50 extra ones. GNOME mode has 3 or 4 slots (table above); udev mode has
+  all 5. Slots `A6`..`A55` use vendor keycodes GNOME cannot express; they would
+  need udev mode plus mapping through `--sniff`.
+- **The key is not really "F16".** F16/F17/F18 arrive as `XF86Launch7/8/9`. If
+  you create shortcuts by hand in GNOME, use those names.
+- **One shortcut per slot.** GNOME shortcuts are global: the key opens the app
+  regardless of the active keyboard profile/layer.
+- **2.4 GHz receiver** (`SetReceiverVpidMap`) is ignored; the original Assist's
+  keyboard↔receiver pairing is not replicated. Use the cable.
+- **Unofficial.** The protocol may change without notice in any Launcher
+  update. `kassist doctor` and `tools/selftest.py` help to locate the break.
+- **Privacy (udev mode).** The udev rule gives your user read access to the
+  keyboard (like `keyd`/`kanata`). GNOME mode has no such rule.
 
-## Estrutura
+## Repository layout
 
 ```
-kassist.py                          serviço + CLI (WS, apps, binds, atalhos, evdev)
-install.sh                          instalador (--udev, --uninstall)
-tests/smoke.py                      teste do protocolo com cliente WS próprio
-tools/selftest.py                   diagnóstico de ambiente (e --simulate)
-tools/keypeek.py                    mostra o keyval real que a tecla envia
-docs/vm-testing.pt-BR.md            roteiro de teste em GNOME Boxes
-packaging/kassist.service           unit systemd --user (template)
-packaging/launcherassist.desktop    handler de launcherassist:// (template)
-packaging/99-keychron-assist.rules  regra udev (só modo --udev)
+kassist.py                          service + CLI (WS, apps, binds, shortcuts, evdev)
+install.sh                          installer (--udev, --rules, --uninstall)
+tests/smoke.py                      protocol test with a raw WS client
+tools/selftest.py                   environment diagnostics (and --simulate)
+tools/keypeek.py                    shows the real keyval the key sends
+docs/vm-testing.md                  GNOME Boxes test guide (Debian/Ubuntu)
+docs/status.md                      project status and handoff notes
+packaging/kassist.service           systemd --user unit (template)
+packaging/launcherassist.desktop    launcherassist:// handler (template)
+packaging/99-keychron-assist.rules  udev rule (--udev/--rules only)
 ```
 
-## Licença
+## License
 
-MIT (veja `LICENSE`). Projeto não oficial, sem vínculo com a Keychron.
+MIT (see `LICENSE`). Unofficial project, not affiliated with Keychron.

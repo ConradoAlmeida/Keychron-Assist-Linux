@@ -1,4 +1,5 @@
-# Permite que o usuário da sessão ativa leia os eventos de entrada dos
-# dispositivos Keychron (necessário para o quick start / Launch APP).
+# Let the active session's user read input events from Keychron devices
+# (needed for quick start / Launch APP) and write to their hidraw nodes
+# (needed by the site's WebHID to program the key).
 KERNEL=="event*", SUBSYSTEM=="input", ATTRS{idVendor}=="3434", TAG+="uaccess"
 KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="3434", TAG+="uaccess"
