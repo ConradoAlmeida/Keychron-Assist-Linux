@@ -257,7 +257,9 @@ verified behaviour:
   - Ubuntu 24.04: **real end-to-end** with Google Chrome (.deb): the site saved
     F16 → Calculator and the physical key opened it. The Chromium snap cannot
     do WebHID (section 5.7).
-  - Not verified yet: Debian KDE (`--udev` with the physical key); see 7.1.
+  - Debian KDE (`--udev`): **real end-to-end** — the site saved F16 → KCalc,
+    the daemon read evdev and the physical key launched KCalc
+    (`launched: gio launch …` in the journal).
 
 ### What was only checked from repositories (Podman containers)
 
@@ -274,26 +276,24 @@ covers.
 
 ## 7. Pending work (in suggested order)
 
-### 7.1 Immediate — graphical test in the VMs
+### 7.1 Done — graphical test in the VMs
 
-The lab is up on the Fedora host: three libvirt VMs (disks under
-`/mnt/ssd256/VMs`), autologin as `conrado`, `openssh-server`, Chromium and
-`wtype` installed, repo copied to `~/kassist`, and `./install.sh` already
-validated (section 6). Guide: [`docs/vm-testing.md`](vm-testing.md).
+All three guests were validated end-to-end with the physical V6 Max:
 
-Remaining:
+| guest | backend | result |
+|---|---|---|
+| Debian 13 GNOME | GNOME shortcuts | site saved F16 → Calculator; key opened it |
+| Ubuntu 24.04 | GNOME shortcuts | site saved F16 → Calculator (Chrome .deb); key opened it |
+| Debian 13 KDE | evdev (`--udev`) | site saved F16 → KCalc; key opened it (`launched:` in the journal) |
 
-1. Redirect the Keychron to the **Debian KDE** guest and validate `--udev`: the
-   daemon reads evdev directly (no shortcut), while the site still saves the
-   binding through WebHID.
-2. Collect `python3 tools/selftest.py > ~/selftest.txt` from each guest.
-
-Known points of attention:
+Notes kept from the run:
 
 - 3 slots in GNOME mode (no `<FK19>`) — expected, not a bug;
-- **Ubuntu:** the Chromium snap cannot open `/dev/hidraw` (no `hidraw` slot in
-  snapd) — use the Google Chrome `.deb` (5.7);
-- without the hidraw rule the site cannot save (section 5.2).
+- Ubuntu: the Chromium snap cannot open `/dev/hidraw` (5.7) — `install.sh`
+  offers the Google Chrome `.deb`;
+- after a USB redirection, if the hidraw/evdev ACLs are missing, re-trigger
+  udev: `sudo udevadm trigger --action=add --subsystem-match=input --subsystem-match=hidraw`
+  (or replug the keyboard).
 
 ### 7.2 Packaging
 
