@@ -4,8 +4,9 @@
     python3 tests/smoke.py              # service already on the default port
     python3 tests/smoke.py --port 40004 # throwaway test instance
 
-Covers: handshake, GetVersion, Get, Add/Get/Remove of a binding, rejection of a
-foreign origin and refusal to run a path outside the app list.
+Covers: handshake, GetVersion, Get, Add/Get/Remove of two bindings on different
+slots, rejection of a foreign origin and refusal to run a path outside the app
+list.
 """
 
 from __future__ import annotations
@@ -95,27 +96,52 @@ async def main() -> int:
     print(f"Get -> {len(apps)}/{total} apps, first: {apps[0]['name']}")
     ok &= total == len(apps) > 0 and "icon_path" in apps[0]
 
-    target = next(a for a in apps if a["path"].endswith(".desktop"))
-    bind = {"opt_type": "App", "opt_data": {"name": target["name"], "path": target["path"]}}
-    await send(writer, "QuickStart", "AddKeyBind", json.dumps({"vp_id": TEST_VP, "key": "F16", "bind": bind}))
-    r = await recv(reader)
-    print("AddKeyBind ->", r["evt_data"]["data"])
-    ok &= r["evt_data"]["data"] == "Success"
+    desktops = [a for a in apps if a["path"].endswith(".desktop")]
+    if len(desktops) < 2:
+        print("need at least two .desktop apps to test two slots")
+        return 1
+    target, target2 = desktops[0], desktops[1]
+    binds = {
+        "F16": {"opt_type": "App", "opt_data": {"name": target["name"], "path": target["path"]}},
+        "F17": {"opt_type": "App", "opt_data": {"name": target2["name"], "path": target2["path"]}},
+    }
+    for key, bind in binds.items():
+        await send(writer, "QuickStart", "AddKeyBind",
+                   json.dumps({"vp_id": TEST_VP, "key": key, "bind": bind}))
+        r = await recv(reader)
+        print(f"AddKeyBind {key} ->", r["evt_data"]["data"])
+        ok &= r["evt_data"]["data"] == "Success"
 
-    await send(writer, "QuickStart", "GetKeyBinds", json.dumps(TEST_VP))
+    async def get_binds() -> list[dict]:
+        await send(writer, "QuickStart", "GetKeyBinds", json.dumps(TEST_VP))
+        return (await recv(reader))["evt_data"]["data"]
+
+    got = await get_binds()
+    print("GetKeyBinds ->", ", ".join(f"{b['key']} -> {b['opt_data']['name']}" for b in got))
+    by_key = {b["key"]: b["opt_data"]["path"] for b in got}
+    ok &= by_key == {"F16": target["path"], "F17": target2["path"]}
+
+    await send(writer, "QuickStart", "RemoveKeyBind",
+               json.dumps({"vp_id": TEST_VP, "key": "F16", "bind": binds["F16"]}))
     r = await recv(reader)
-    print("GetKeyBinds ->", r["evt_data"]["data"])
-    ok &= len(r["evt_data"]["data"]) == 1 and r["evt_data"]["data"][0]["key"] == "F16"
+    print("RemoveKeyBind F16 ->", r["evt_data"]["data"])
+    ok &= r["evt_data"]["data"] == "Success"
+    got = await get_binds()
+    print("after F16 removal ->", [b["key"] for b in got])
+    ok &= [b["key"] for b in got] == ["F17"] and got[0]["opt_data"]["path"] == target2["path"]
 
     await send(writer, "SysCmd", "SpawnAppByPath", "/usr/bin/true")
     r = await recv(reader)
     print("SpawnAppByPath(/usr/bin/true) ->", r["evt_data"]["data"])
     ok &= r["evt_data"]["data"] is False
 
-    await send(writer, "QuickStart", "RemoveKeyBind", json.dumps({"vp_id": TEST_VP, "key": "F16", "bind": bind}))
+    await send(writer, "QuickStart", "RemoveKeyBind",
+               json.dumps({"vp_id": TEST_VP, "key": "F17", "bind": binds["F17"]}))
     r = await recv(reader)
-    print("RemoveKeyBind ->", r["evt_data"]["data"])
     ok &= r["evt_data"]["data"] == "Success"
+    got = await get_binds()
+    print("after F17 removal ->", got)
+    ok &= got == []
 
     writer.close()
     print("\nRESULT:", "PASS" if ok else "FAIL")

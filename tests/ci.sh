@@ -24,11 +24,19 @@ export XDG_CONFIG_HOME="$WORK/config"
 export XDG_DATA_HOME="$WORK/data"
 mkdir -p "$XDG_DATA_HOME/applications"
 
-# Fixture app so the list is never empty in a bare container.
+# Fixtures so the list is never empty in a bare container (the smoke test
+# binds two slots to different apps).
 cat > "$XDG_DATA_HOME/applications/ci-fixture.desktop" <<'EOF'
 [Desktop Entry]
 Type=Application
 Name=CI Fixture
+Exec=/bin/true
+Icon=utilities-terminal
+EOF
+cat > "$XDG_DATA_HOME/applications/ci-fixture-2.desktop" <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=CI Fixture 2
 Exec=/bin/true
 Icon=utilities-terminal
 EOF
