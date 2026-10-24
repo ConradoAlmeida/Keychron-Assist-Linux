@@ -70,3 +70,31 @@ jobs:
         with:
           name: kassist-deb
           path: kassist_*.deb
+
+  rpm:
+    name: rpm package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the .rpm
+        run: |
+          mkdir -p "$RUNNER_TEMP/stage/Keychron-Assist-Linux-0.1.0" "$RUNNER_TEMP/out"
+          tar -C . --exclude=.git --exclude='*/__pycache__' --exclude='*.pyc' -cf - . \
+            | tar -C "$RUNNER_TEMP/stage/Keychron-Assist-Linux-0.1.0" -xf -
+          tar -C "$RUNNER_TEMP/stage" -czf "$RUNNER_TEMP/out/v0.1.0.tar.gz" Keychron-Assist-Linux-0.1.0
+          docker run --rm \
+            -v "$RUNNER_TEMP/out:/rpmbuild" \
+            -v "$PWD/packaging/kassist.spec:/spec/kassist.spec:ro" \
+            fedora:44 \
+            bash -c "dnf -y install rpm-build systemd-rpm-macros >/dev/null 2>&1 \
+                     && mkdir -p /root/rpmbuild/SOURCES /root/rpmbuild/SPECS \
+                     && cp /rpmbuild/v0.1.0.tar.gz /root/rpmbuild/SOURCES/ \
+                     && cp /spec/kassist.spec /root/rpmbuild/SPECS/ \
+                     && rpmbuild -bb /root/rpmbuild/SPECS/kassist.spec \
+                     && cp /root/rpmbuild/RPMS/noarch/*.rpm /rpmbuild/"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kassist-rpm
+          path: ${{ runner.temp }}/out/*.rpm

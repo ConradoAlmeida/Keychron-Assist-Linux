@@ -302,7 +302,9 @@ Notes kept from the run:
   handler, the udev rule and `kassist-setup`. The unit runs `kassist run` and
   the daemon auto-selects GNOME or evdev. Validated on Debian 13 GNOME and KDE;
   CI builds it on every push.
-- `.rpm` + COPR (Fedora): same structure.
+- `.rpm` + COPR (Fedora): spec in `packaging/kassist.spec`; local build
+  validated on Fedora 44 (`kassist-0.1.0-1.fc44.noarch.rpm`), deps satisfied and
+  `rpm -Uvh --test` clean. COPR publication pending an account.
 - `PKGBUILD` (Arch) — a large custom-keyboard audience.
 - Flatpak: **not viable** for the daemon (it must launch host apps); document as
   unsupported.
@@ -383,20 +385,22 @@ instance use `fuser -k 40006/tcp`.
 
 ```
 kassist.py                          daemon + CLI (stdlib only)
-debian/                             Debian packaging (debhelper, kassist-setup)
-install.sh                          installer (--udev, --rules, --uninstall)
+debian/                             Debian packaging (debhelper)
+install.sh                          installer (--udev, --rules, --browser)
 tests/smoke.py                      protocol test (raw WS client)
 tools/selftest.py                   environment diagnostics + --simulate
 tools/keysim.py                     uinput key injector (GNOME --simulate)
 tools/keypeek.py                    shows the key's keyval/keycode
 tests/ci.sh                         headless test slice used by CI
-.github/workflows/ci.yml            CI: syntax, shellcheck, protocol, distros
+.github/workflows/ci.yml            CI: syntax, shellcheck, protocol, distros, .deb/.rpm
 docs/vm-testing.md                  virt-manager guide (Debian/Ubuntu/KDE)
 docs/status.md                      this document
 README.md                           overview, protocol, distro matrix
 SECURITY.md                         security policy and contact
 LICENSE                             MIT
 packaging/kassist.service           systemd --user unit (template @EXEC@)
+packaging/kassist-setup             per-user setup for the packages
+packaging/kassist.spec              Fedora RPM spec (COPR-ready)
 packaging/launcherassist.desktop    URI handler (template @EXEC@)
 packaging/99-keychron-assist.rules  udev rule (uaccess for evdev and hidraw)
 ```

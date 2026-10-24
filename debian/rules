@@ -5,7 +5,7 @@
 
 override_dh_auto_install:
 	install -D -m 0755 kassist.py debian/kassist/usr/bin/kassist
-	install -D -m 0755 debian/kassist-setup debian/kassist/usr/bin/kassist-setup
+	install -D -m 0755 packaging/kassist-setup debian/kassist/usr/bin/kassist-setup
 	install -D -m 0644 debian/kassist.user.service debian/kassist/usr/lib/systemd/user/kassist.service
 	install -D -m 0644 debian/launcherassist.desktop debian/kassist/usr/share/applications/launcherassist.desktop
 	install -D -m 0644 packaging/99-keychron-assist.rules debian/kassist/lib/udev/rules.d/99-keychron-assist.rules

@@ -160,6 +160,17 @@ The package installs `/usr/bin/kassist`, the user unit in
 GNOME shortcuts (or reports that the evdev backend will be used). The unit
 runs `kassist run`; the daemon picks the backend at startup.
 
+### Fedora
+
+```bash
+sudo dnf install ./kassist-0.1.0-1.fc44.noarch.rpm
+kassist-setup
+```
+
+The spec is in `packaging/kassist.spec` (COPR-ready) and builds the same
+layout: `/usr/bin/kassist`, `kassist-setup`, the user unit, the handler and
+the udev rule.
+
 ## Commands
 
 ```bash
