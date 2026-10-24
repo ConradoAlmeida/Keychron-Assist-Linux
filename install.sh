@@ -8,6 +8,7 @@
 #   ./install.sh              install/update (no root)
 #   ./install.sh --rules      install only the keyboard udev rule (sudo)
 #   ./install.sh --udev       evdev backend + udev rule (sudo)
+#   ./install.sh --browser    install Google Chrome when only a confined browser exists (sudo)
 #   ./install.sh --uninstall  remove the per-user install (keeps bindings)
 set -euo pipefail
 
@@ -21,6 +22,7 @@ APP_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 MODE=gnome
 ACTION=install
 INSTALL_RULES=0
+INSTALL_BROWSER=0
 
 usage() {
   cat <<'EOF'
@@ -33,12 +35,51 @@ Usage:
   ./install.sh              install/update (no root)
   ./install.sh --rules      install only the keyboard udev rule (sudo)
   ./install.sh --udev       evdev backend + udev rule (sudo)
+  ./install.sh --browser    install Google Chrome when only a confined browser exists (sudo)
   ./install.sh --uninstall  remove the per-user install (keeps bindings)
 EOF
   exit 0
 }
 
 die() { echo "error: $*" >&2; exit 1; }
+
+install_browser() {
+  # The launcher needs WebHID (/dev/hidraw); snap/flatpak builds are confined.
+  # On Debian/Ubuntu the pragmatic unconfined build is Google Chrome (.deb).
+  # shellcheck source=/dev/null
+  . /etc/os-release 2>/dev/null || true
+  case "${ID:-}${ID_LIKE:-}" in
+    *debian*|*ubuntu*)
+      tmp=$(mktemp --suffix=.deb)
+      echo "==> downloading Google Chrome (.deb)"
+      if command -v wget >/dev/null 2>&1; then
+        wget -qO "$tmp" https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb || true
+      elif command -v curl >/dev/null 2>&1; then
+        curl -fsSL -o "$tmp" https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb || true
+      else
+        rm -f "$tmp"
+        echo "  install wget or curl, then run: ./install.sh --browser" >&2
+        return 1
+      fi
+      if [ -s "$tmp" ]; then
+        sudo apt-get install -y "$tmp"
+        rm -f "$tmp"
+      else
+        rm -f "$tmp"
+        echo "  download failed; install Chrome manually" >&2
+        return 1
+      fi
+      ;;
+    *fedora*)
+      echo "  install an unconfined build with: sudo dnf install -y chromium"
+      return 1
+      ;;
+    *)
+      echo "  install an unconfined Chromium/Chrome manually" >&2
+      return 1
+      ;;
+  esac
+}
 
 have_gnome_schema() {
   command -v gsettings >/dev/null 2>&1 &&
@@ -49,6 +90,7 @@ for arg in "$@"; do
   case "$arg" in
     --udev) MODE=udev; INSTALL_RULES=1 ;;
     --rules) INSTALL_RULES=1 ;;
+    --browser) INSTALL_BROWSER=1 ;;
     --uninstall) ACTION=uninstall ;;
     -h|--help) usage ;;
     *) die "unknown argument: $arg" ;;
@@ -107,11 +149,18 @@ for b in google-chrome google-chrome-stable chromium chromium-browser microsoft-
   esac
 done
 if [ "$browser_ok" = 0 ]; then
-  echo "==> note: the launcher needs an unconfined Chromium/Chrome (WebHID)"
-  if command -v snap >/dev/null 2>&1 && snap list chromium >/dev/null 2>&1; then
-    echo "    the Chromium snap cannot open /dev/hidraw. Install Google Chrome:"
-    echo "    wget -qO /tmp/chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
-    echo "    sudo apt install -y /tmp/chrome.deb"
+  echo "==> the launcher needs an unconfined Chromium/Chrome (WebHID)"
+  if [ "$INSTALL_BROWSER" = 1 ]; then
+    install_browser || true
+  elif [ -t 0 ]; then
+    printf "    install Google Chrome now? [Y/n] "
+    read -r ans || ans=n
+    case "$ans" in
+      ""|y|Y|yes|YES) install_browser || true ;;
+      *) echo "    skipped; install it later with: ./install.sh --browser" ;;
+    esac
+  elif command -v snap >/dev/null 2>&1 && snap list chromium >/dev/null 2>&1; then
+    echo "    the Chromium snap cannot open /dev/hidraw. Run: ./install.sh --browser"
   else
     echo "    install Chromium or Google Chrome for the site's WebHID support"
   fi

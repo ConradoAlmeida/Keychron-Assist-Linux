@@ -38,7 +38,8 @@ sudo apt install -y /tmp/chrome.deb
 > The Launcher requires a Chromium/Chrome browser. **Firefox does not work**
 > (it blocks `ws://` from an https page). On Ubuntu use the **Chrome `.deb`**:
 > the Chromium snap cannot open `/dev/hidraw` (`snap "snapd" has no "hidraw"
-> interface slots`), so WebHID fails there.
+> interface slots`), so WebHID fails there. The installer detects this and
+> offers to install Chrome; `./install.sh --browser` does it without asking.
 
 **Debian:**
 

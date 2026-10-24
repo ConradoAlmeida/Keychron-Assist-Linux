@@ -187,6 +187,7 @@ interface slots`, and the browser never opens `/dev/hidraw*`. The site connects
 but cannot program the key. Google Chrome from the `.deb` (unconfined) works:
 verified on Ubuntu 24.04 — the site saved F16 → Calculator and the physical key
 opened it. Use the Chrome `.deb` on Ubuntu until the snap exposes the interface.
+`install.sh` detects this case and offers to install Chrome (`--browser`).
 
 ---
 
