@@ -43,30 +43,59 @@ shellcheck install.sh tests/ci.sh packaging/kassist-setup debian/postinst
 The CI (`.github/workflows/ci.yml`) also builds the `.deb` (debian:13) and the
 `.rpm` (fedora:44) on every push. Do not commit build artifacts.
 
-## Releases (automated on tag)
+## Release runbook (agent)
 
-The publication itself is automated by `.github/workflows/release.yml`, which
-runs **only when a `v*` tag is pushed**. It validates the tag against the
-version files, builds the packages, generates `SHA256SUMS` and creates the
-GitHub release with the workflow token.
+When the maintainer asks to release `X.Y.Z`, reproduce exactly this sequence.
+The build/upload is done by `.github/workflows/release.yml` on the tag push —
+do **not** create the release by hand.
 
-Steps (full checklist in `RELEASING.md`):
-
-1. Bump the version in all four places: `kassist.py` (`VERSION`),
-   `debian/changelog`, `packaging/kassist.spec`, and the README package
-   examples.
-2. Add `docs/release-notes/vX.Y.Z.md` (it becomes the release body).
-3. Commit, then:
+1. Start clean:
    ```bash
+   git switch main && git pull --ff-only
+   git status --short          # must be empty
+   ```
+
+2. Bump the four version places:
+   ```bash
+   sed -i 's/^VERSION = ".*"/VERSION = "X.Y.Z"/' kassist.py
+   sed -i 's/^Version:.*/Version:        X.Y.Z/' packaging/kassist.spec
+   # debian/changelog: prepend an entry
+   #   kassist (X.Y.Z) unstable; urgency=medium
+   #
+   #     * <summary>.
+   #
+   #    -- Conrado Almeida <conrado.almeida@outlook.com>  $(date -R)
+   # README.md: update the example package filenames
+   ```
+
+3. Write `docs/release-notes/vX.Y.Z.md` (shape: `docs/release-notes/v0.1.0.md`).
+
+4. Run the checks:
+   ```bash
+   bash tests/ci.sh
+   python3 -m compileall -q kassist.py tools tests
+   shellcheck install.sh tests/ci.sh packaging/kassist-setup debian/postinst
+   ```
+
+5. Commit and push:
+   ```bash
+   git add -A && git commit -m "Release X.Y.Z"
    git tag -a vX.Y.Z -m "kassist X.Y.Z"
    git push origin main
    git push origin vX.Y.Z
    ```
-4. Wait for the **Release** workflow and confirm the assets (`.deb`, `.rpm`,
-   `SHA256SUMS`) on the release page.
 
-Do **not** create or upload releases by hand, and never move a tag after a
-release exists — bump the patch version instead.
+6. Wait for the **Release** workflow and verify the assets:
+   ```bash
+   gh run watch                 # or the Actions page
+   gh release view vX.Y.Z
+   # without gh:
+   curl -s https://api.github.com/repos/ConradoAlmeida/Keychron-Assist-Linux/releases/tags/vX.Y.Z
+   ```
+
+If the workflow fails **before** the release exists, fix and move the tag
+(`git tag -f … && git push -f origin …`). If the release exists, never move the
+tag: bump the patch version and repeat.
 
 ## Constraints
 
