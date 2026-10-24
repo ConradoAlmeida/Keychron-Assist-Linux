@@ -402,6 +402,7 @@ tests/ci.sh                         headless test slice used by CI
 .github/workflows/ci.yml            CI: syntax, shellcheck, protocol, distros, .deb/.rpm
 docs/vm-testing.md                  virt-manager guide (Debian/Ubuntu/KDE)
 docs/status.md                      this document
+RELEASING.md                        release checklist (tag → automated build)
 README.md                           overview, protocol, distro matrix
 SECURITY.md                         security policy and contact
 LICENSE                             MIT

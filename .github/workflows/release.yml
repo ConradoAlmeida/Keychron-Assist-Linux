@@ -19,6 +19,8 @@ jobs:
           ver="${GITHUB_REF_NAME#v}"
           deb_ver=$(sed -n '1s/.*(\(.*\)).*/\1/p' debian/changelog)
           rpm_ver=$(sed -n 's/^Version:[[:space:]]*//p' packaging/kassist.spec | head -1)
+          py_ver=$(sed -n 's/^VERSION = "\(.*\)"/\1/p' kassist.py)
+          [ "$ver" = "$py_ver" ] || { echo "tag $ver != kassist.py VERSION $py_ver"; exit 1; }
           [ "$ver" = "$deb_ver" ] || { echo "tag $ver != debian/changelog $deb_ver"; exit 1; }
           [ "$ver" = "$rpm_ver" ] || { echo "tag $ver != spec $rpm_ver"; exit 1; }
           test -f "docs/release-notes/${GITHUB_REF_NAME}.md" || {
