@@ -222,6 +222,9 @@ ls -l /dev/hidraw*
 
 - **The list appears, but saving a binding writes nothing**: the hidraw rule is
   missing (section 4). `sudo ./install.sh --rules` and replug the keyboard.
+- **The site cannot open the keyboard after replugging/redirecting:** the udev
+  ACL may not have been re-applied. Run `sudo ./install.sh --rules` (it
+  re-triggers udev) and replug the keyboard.
 - **The shortcut does not fire right after installing**: log out and back in
   (`gsd-media-keys` reloads the grabs on login).
 - **Empty app list**: `tools/selftest.py` shows how many apps were found; check

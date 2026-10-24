@@ -206,8 +206,8 @@ if [ "$INSTALL_RULES" = 1 ]; then
   echo "==> udev rule (sudo)"
   sudo install -m 0644 "$SRC/packaging/99-keychron-assist.rules" /etc/udev/rules.d/99-keychron-assist.rules
   sudo udevadm control --reload-rules
-  sudo udevadm trigger --subsystem-match=input
-  sudo udevadm trigger --subsystem-match=hidraw
+  sudo udevadm trigger --subsystem-match=input --settle
+  sudo udevadm trigger --subsystem-match=hidraw --settle
   echo
   echo "To undo: sudo rm /etc/udev/rules.d/99-keychron-assist.rules && sudo udevadm control --reload-rules"
 fi
