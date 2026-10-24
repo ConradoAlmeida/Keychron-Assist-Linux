@@ -304,7 +304,9 @@ Notes kept from the run:
   CI builds it on every push.
 - `.rpm` + COPR (Fedora): spec in `packaging/kassist.spec`; local build
   validated on Fedora 44 (`kassist-0.1.0-1.fc44.noarch.rpm`), deps satisfied and
-  `rpm -Uvh --test` clean. COPR publication pending an account.
+  `rpm -Uvh --test` clean. **COPR not planned for now** — the project is small
+  and the `.rpm` attached to the release covers manual installs; the spec is
+  COPR-ready if it grows.
 - `PKGBUILD` (Arch) — a large custom-keyboard audience.
 - Flatpak: **not viable** for the daemon (it must launch host apps); document as
   unsupported.
