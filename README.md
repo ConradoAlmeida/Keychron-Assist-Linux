@@ -1,28 +1,55 @@
 # Keychron Assist for Linux (unofficial)
 
 [![CI](https://github.com/ConradoAlmeida/Keychron-Assist-Linux/actions/workflows/ci.yml/badge.svg)](https://github.com/ConradoAlmeida/Keychron-Assist-Linux/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/ConradoAlmeida/Keychron-Assist-Linux)](https://github.com/ConradoAlmeida/Keychron-Assist-Linux/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 The Keychron Launcher (`https://launcher.keychron.com`) has a feature called
 **Quick Start → Launch APP** that opens programs with a key on the keyboard.
 On Windows and macOS that feature relies on the **Keychron Assist** utility,
 which does not exist for Linux. This project is a free replacement.
 
+![Keychron Launcher connected to a V6 Max](docs/images/launcher-connected.png)
+
+## Install
+
+Debian / Ubuntu:
+
+```bash
+sudo apt install ./kassist_0.1.0_all.deb
+kassist-setup
+```
+
+Fedora:
+
+```bash
+sudo dnf install ./kassist-0.1.0-1.fc44.noarch.rpm
+kassist-setup
+```
+
+From source, any distro (no root): `./install.sh` — see
+[Installation](#installation-no-sudo). Packages are on the
+[latest release](https://github.com/ConradoAlmeida/Keychron-Assist-Linux/releases/latest).
+
+## Status
+
+Verified end-to-end with a Keychron V6 Max on Fedora 44 (GNOME 50), Debian 13
+GNOME, Ubuntu 24.04 and Debian 13 KDE (Plasma 6.3.6), all Wayland: the site
+saved the binding and the physical key opened the app.
+
+| distro / desktop | backend | usable slots | state |
+|---|---|---|---|
+| Fedora 44 GNOME | GNOME shortcuts | **4** (F16–F19) | tested with the real keyboard |
+| Debian 13 GNOME | GNOME shortcuts | **3** (F16–F18) | tested with the real keyboard |
+| Ubuntu 24.04 GNOME | GNOME shortcuts | **3** (F16–F18) | tested with the real keyboard |
+| Debian 13 KDE | evdev (`--udev`) | **5** (F16–F20) | tested with the real keyboard |
+
+`xkeyboard-config` 2.42 (Debian 13 / Ubuntu 24.04) does not define `<FK19>`;
+Fedora 44 (2.47) does. `--udev` does not depend on XKB. The number of slots
+depends on the environment, not on this project.
+
 Project status and handoff notes (what works, what is left, decisions and
 gotchas): [`docs/status.md`](docs/status.md).
-
-Status: **works, no root** on Fedora 44 (GNOME 50, Wayland). App list, search,
-icons, binding writes and triggering from the physical key have been verified.
-Debian/Ubuntu: packages and keymap checked; the graphical-session test is
-pending (guide in [`docs/vm-testing.md`](docs/vm-testing.md)).
-
-| distro | GNOME/Wayland | usable slots (GNOME mode) | state |
-|---|---|---|---|
-| Fedora 44 | 50.6 | **4** (F16–F19) | tested with the real keyboard |
-| Debian 13 | 48 | **3** (F16–F18) | packages and XKB checked |
-| Ubuntu 24.04 LTS | 46 | **3** (F16–F18) | packages and XKB checked |
-
-The number of slots depends on `xkeyboard-config` (see below), not on this
-project.
 
 ## How the Launcher talks to the Assist
 
