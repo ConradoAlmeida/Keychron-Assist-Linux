@@ -199,7 +199,9 @@ verified behaviour:
    `docs/vm-testing.md`, `docs/status.md` and the MIT `LICENSE`.
 8. **Removed**: `packaging/gnome-shortcuts.py` (replaced by `kassist
    setup-shortcuts` / `remove-shortcuts`).
-9. **Published on GitHub**: <https://github.com/ConradoAlmeida/Keychron-Assist-Linux>
+9. **CI**: `.github/workflows/ci.yml` + `tests/ci.sh` (headless protocol test,
+   Python matrix, distro containers) and the README badge.
+10. **Published on GitHub**: <https://github.com/ConradoAlmeida/Keychron-Assist-Linux>
    (two commits: the GitHub-generated `Initial commit` plus the project).
    Everything, including code comments, output messages and docs, is in
    English.
@@ -211,6 +213,8 @@ verified behaviour:
   `XDG_CONFIG_HOME`): **PASS** on every check, including `403` for a foreign
   origin and `False` for `/usr/bin/true`.
 - `tools/selftest.py`: **25 checks, 0 failures**.
+- `tests/ci.sh` (the CI slice) in Debian 13, Ubuntu 24.04 and Python 3.9
+  containers: **PASS** in all three, plus a clean `shellcheck` run.
 - `kassist trigger F16` (the shortcut flow) and `kassist protocol` work.
 - `--version`, `--help`, `doctor` right after a service restart (no false
   negative).
@@ -262,8 +266,11 @@ Known points of attention:
 
 ### 7.3 Publication
 
-- CI (GitHub Actions): `python3 -m compileall`, smoke test with the daemon
-  started, `shellcheck` on `install.sh`.
+- ~~CI (GitHub Actions)~~ **done**: `.github/workflows/ci.yml` runs
+  `compileall` on Python 3.9/3.11/3.13, `shellcheck` on the shell scripts and
+  `tests/ci.sh` (headless protocol test) on the runner and inside Debian 13 /
+  Ubuntu 24.04 containers. The same commands were validated locally with
+  Podman before the first run.
 - Add the repository description and topics on GitHub (manual: `gh` is not
   installed): `keychron`, `qmk`, `linux`, `gnome`, `wayland`, `hid`.
 - Tag `v0.1.0` and publish a release with the tarball and instructions.
@@ -335,6 +342,8 @@ install.sh                          installer (--udev, --rules, --uninstall)
 tests/smoke.py                      protocol test (raw WS client)
 tools/selftest.py                   environment diagnostics + --simulate
 tools/keypeek.py                    shows the key's keyval/keycode
+tests/ci.sh                         headless test slice used by CI
+.github/workflows/ci.yml            CI: syntax, shellcheck, protocol, distros
 docs/vm-testing.md                  GNOME Boxes guide (Debian/Ubuntu)
 docs/status.md                      this document
 README.md                           overview, protocol, distro matrix

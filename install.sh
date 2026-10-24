@@ -79,6 +79,7 @@ for cmd in python3 gsettings gio xdg-mime; do
 done
 if [ ${#missing[@]} -gt 0 ]; then
   echo "missing commands: ${missing[*]}"
+  # shellcheck source=/dev/null
   . /etc/os-release 2>/dev/null || true
   case "${ID:-}${ID_LIKE:-}" in
     *debian*|*ubuntu*) echo "  sudo apt install -y python3 libglib2.0-bin xdg-utils desktop-file-utils zenity" ;;

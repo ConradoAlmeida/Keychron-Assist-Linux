@@ -74,8 +74,12 @@ def log(*args: object) -> None:
 # Application discovery
 # --------------------------------------------------------------------------
 
+def data_home() -> Path:
+    return Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share"))
+
+
 def desktop_dirs() -> list[Path]:
-    dirs = [Path.home() / ".local/share/applications"]
+    dirs = [data_home() / "applications"]
     for base in os.environ.get("XDG_DATA_DIRS", "/usr/local/share:/usr/share").split(":"):
         if base:
             dirs.append(Path(base) / "applications")
@@ -93,7 +97,7 @@ def desktop_dirs() -> list[Path]:
 
 
 def icon_dirs() -> list[Path]:
-    dirs = [Path.home() / ".local/share/icons", Path("/usr/share/icons"), Path("/usr/share/pixmaps"),
+    dirs = [data_home() / "icons", Path("/usr/share/icons"), Path("/usr/share/pixmaps"),
             Path("/var/lib/flatpak/exports/share/icons"),
             Path.home() / ".local/share/flatpak/exports/share/icons"]
     return [d for d in dirs if d.is_dir()]

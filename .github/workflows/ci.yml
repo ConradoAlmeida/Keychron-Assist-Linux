@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  protocol:
+    name: protocol (python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.9", "3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Syntax check
+        run: python -m compileall -q kassist.py tools tests
+
+      - name: Lint the installer
+        run: shellcheck install.sh tests/ci.sh
+
+      - name: Protocol smoke test (headless)
+        run: bash tests/ci.sh
+
+  distro:
+    name: ${{ matrix.image }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ["debian:13", "ubuntu:24.04"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Protocol smoke test in ${{ matrix.image }}
+        run: |
+          docker run --rm \
+            -v "$PWD:/src" -w /src \
+            ${{ matrix.image }} \
+            sh -c "apt-get update -qq && apt-get install -y -qq python3 && bash tests/ci.sh"

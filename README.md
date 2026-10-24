@@ -1,5 +1,7 @@
 # Keychron Assist for Linux (unofficial)
 
+[![CI](https://github.com/ConradoAlmeida/Keychron-Assist-Linux/actions/workflows/ci.yml/badge.svg)](https://github.com/ConradoAlmeida/Keychron-Assist-Linux/actions/workflows/ci.yml)
+
 The Keychron Launcher (`https://launcher.keychron.com`) has a feature called
 **Quick Start → Launch APP** that opens programs with a key on the keyboard.
 On Windows and macOS that feature relies on the **Keychron Assist** utility,
@@ -158,6 +160,22 @@ python3 tests/smoke.py                 # protocol, no browser
 python3 tools/selftest.py              # environment + installation
 python3 tools/selftest.py --simulate   # injects the key with wtype (VM)
 ```
+
+## Testing
+
+```bash
+bash tests/ci.sh                       # headless: starts its own daemon, no GUI
+python3 tests/smoke.py                 # protocol, against a running service
+python3 tools/selftest.py              # environment + installation diagnostics
+python3 tools/selftest.py --simulate F16   # injects the key with wtype (VM)
+```
+
+`tests/ci.sh` is what CI runs: it sets up a throwaway `XDG_CONFIG_HOME`/
+`XDG_DATA_HOME`, writes a fixture `.desktop`, starts the daemon on a spare port
+and runs the protocol test. CI also checks syntax on Python 3.9/3.11/3.13,
+lints the shell scripts, and repeats the protocol test inside Debian 13 and
+Ubuntu 24.04 containers. GNOME/Wayland/hardware are covered by the VM guide
+instead.
 
 ## Security
 
