@@ -257,6 +257,7 @@ tools/keypeek.py                    shows the real keyval the key sends
 docs/vm-testing.md                  virt-manager test guide (Debian/Ubuntu/KDE)
 docs/status.md                      project status and handoff notes
 RELEASING.md                        release checklist (tag → automated build)
+AGENTS.md                           instructions for coding agents
 .github/workflows/ci.yml            CI: protocol, distros, shellcheck, .deb/.rpm
 .github/workflows/release.yml       tag → build .deb/.rpm → GitHub release
 packaging/kassist.service           systemd --user unit (template)
