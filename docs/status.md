@@ -254,6 +254,10 @@ verified behaviour:
     Mutter).
   - Debian GNOME: **real end-to-end** — site connected to the V6 Max (WebHID),
     binding F16 → Calculator saved and the physical key opened the app.
+  - Debian GNOME also validated **two slots at once** (without the keyboard):
+    F16 → Calculator and F17 → Text Editor launched independently via
+    `tools/keysim.py`; `tests/smoke.py` now covers two slots bound to different
+    apps in the protocol.
   - Ubuntu 24.04: **real end-to-end** with Google Chrome (.deb): the site saved
     F16 → Calculator and the physical key opened it. The Chromium snap cannot
     do WebHID (section 5.7).
